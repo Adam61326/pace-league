@@ -25,5 +25,7 @@ export async function GET(request: NextRequest) {
   });
 
   const redirectUri = new URL("/api/strava/callback", request.url).toString();
-  return NextResponse.redirect(getStravaAuthorizeUrl(redirectUri, state));
+  const response = NextResponse.redirect(getStravaAuthorizeUrl(redirectUri, state));
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
