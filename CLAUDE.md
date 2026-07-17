@@ -112,12 +112,21 @@ Bonus régularité (calculé en fin de semaine, par utilisateur) :
   - Division C : moins de 50 coureurs actifs
 - Promotion / relégation : à la fin de chaque saison, les 2 meilleurs pays de chaque division montent d'une division, les 2 derniers descendent (sauf Division A qui n'a personne au-dessus, et Division C qui n'a personne en dessous)
 
+## Architecture produit : trois niveaux de classement
+
+Le produit s'organise en trois niveaux emboîtés. Les trois partagent le même calcul individuel (`weekly_scores`) : aucune nouvelle logique de scoring n'est introduite d'un niveau à l'autre, seuls le filtrage et l'agrégation changent.
+
+1. **Niveau Monde (fait, Sprint 3)** — classement individuel mondial, tous pays confondus (`/classement`, scope "monde").
+2. **Niveau Pays (en cours, Sprint 4)** — classement individuel filtré par pays (`/classement`, scope "pays") + ligues de pays avec divisions A/B/C et promotion/relégation (`/ligues`, voir "Logique de ligues (par pays)" ci-dessus).
+3. **Niveau Ligues privées (prévu, Sprint 5)** — ligues créées par un utilisateur, rejointes par un code à 6 caractères, avec un classement individuel filtré aux seuls membres de la ligue. Réutilise tel quel le calcul `weekly_scores` existant : aucune nouvelle logique de scoring, juste un filtre supplémentaire sur l'appartenance à la ligue.
+
 ## Priorités de développement (sprints)
 
 1. Sprint 1 : Auth Supabase + connexion OAuth Strava + stockage des tokens
 2. Sprint 2 : Réception des activités via Strava Webhooks, stockage dans activities, filtres anti-triche
 3. Sprint 3 : Calcul du scoring hebdomadaire (weekly_scores), agrégation par pays (country_scores)
 4. Sprint 4 : Interface publique de classement (par division, par pays), page profil utilisateur avec historique de points
+5. Sprint 5 : Ligues privées — table `leagues` (id, name, code, created_by, created_at), table `league_members` (league_id, user_id, joined_at), page de création/jointure par code, page de classement filtré par ligue
 
 ## Décisions déjà prises (ne pas remettre en question sans discussion explicite)
 
