@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     dashboardUrl.searchParams.set("strava", "connected");
-  } catch {
+  } catch (err) {
+    console.error("strava callback: token exchange or user update failed", user.id, err);
     dashboardUrl.searchParams.set("strava_error", "exchange_failed");
   }
 
