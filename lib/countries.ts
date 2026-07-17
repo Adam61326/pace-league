@@ -31,3 +31,11 @@ export function getSortedCountries(): { code: string; name: string }[] {
     a.name.localeCompare(b.name, "fr")
   );
 }
+
+// Convertit un code ISO 3166-1 alpha-2 en emoji drapeau (lettres régionales
+// Unicode, offset entre 'A' et 🇦).
+export function getCountryFlag(code: string): string {
+  return code
+    .toUpperCase()
+    .replace(/./g, (char) => String.fromCodePoint(char.charCodeAt(0) + 127397));
+}

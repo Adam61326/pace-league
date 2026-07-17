@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       distance_km: activity.distance / 1000,
       moving_time_seconds: activity.moving_time,
       avg_speed_kmh: avgSpeedKmh,
+      total_elevation_gain: activity.total_elevation_gain,
       has_gps: true,
       activity_date: activity.start_date_local.slice(0, 10),
     },

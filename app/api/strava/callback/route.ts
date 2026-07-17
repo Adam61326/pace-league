@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
         strava_access_token: encryptToken(tokenResponse.access_token),
         strava_refresh_token: encryptToken(tokenResponse.refresh_token),
         strava_token_expires_at: new Date(tokenResponse.expires_at * 1000).toISOString(),
+        strava_firstname: tokenResponse.athlete.firstname || null,
+        strava_lastname: tokenResponse.athlete.lastname || null,
       })
       .eq("id", user.id);
 

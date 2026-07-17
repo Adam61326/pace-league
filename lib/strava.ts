@@ -29,7 +29,10 @@ interface StravaRefreshResponse {
 // Réponse à l'échange initial du code d'autorisation : contient en plus
 // l'athlète Strava, absent des réponses de refresh.
 export interface StravaTokenResponse extends StravaRefreshResponse {
-  athlete: { id: number };
+  // Strava renvoie ce résumé athlète dès l'échange du code, sans scope
+  // supplémentaire requis (firstname/lastname peuvent être vides si
+  // l'athlète a masqué son nom réel dans ses réglages de confidentialité).
+  athlete: { id: number; firstname: string; lastname: string };
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokenResponse> {
@@ -117,6 +120,7 @@ export interface StravaActivityDetail {
   distance: number; // mètres
   moving_time: number; // secondes
   average_speed: number; // m/s
+  total_elevation_gain: number; // mètres
   start_date_local: string; // ISO 8601
   start_latlng: [number, number] | null;
   manual: boolean;
