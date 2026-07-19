@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Tableau de bord" },
+  { href: "/mes-activites", label: "Mes activités" },
   { href: "/classement", label: "Classement" },
   { href: "/ligues", label: "Ligues" },
   { href: "/ligues-privees", label: "Ligues privées" },

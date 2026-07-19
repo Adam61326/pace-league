@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Barème Sprint 3 (précisé explicitement par le produit, remplace le
 // brouillon "Logique de scoring" du CLAUDE.md pour ce qui est implémenté ici).
-const MIN_VALID_DISTANCE_KM = 1.5; // filtre anti-spam
+export const MIN_VALID_DISTANCE_KM = 1.5; // filtre anti-spam
 const DISTANCE_POINTS_PER_KM = 2;
 const MAX_DAILY_DISTANCE_KM = 40;
 const ELEVATION_POINTS_PER_METERS = 20; // 1 point / tranche de 20m
@@ -20,9 +20,54 @@ export interface ScoredActivity {
 
 export interface WeeklyScoreResult {
   base_points: number;
+  distance_points: number;
+  dplus_points: number;
   progression_bonus: number;
   regularity_bonus: number;
   total_points: number;
+}
+
+export interface DayScore {
+  distance_points: number;
+  dplus_points: number;
+  participation_points: number;
+  total_points: number;
+}
+
+// Une activité sous ce seuil n'est jamais prise en compte dans le score
+// (anti-spam), qu'elle soit seule ou groupée avec d'autres le même jour.
+export function isActivityScorable(activity: { distance_km: number | null }): boolean {
+  return (activity.distance_km ?? 0) >= MIN_VALID_DISTANCE_KM;
+}
+
+// Score d'une seule journée à partir de ses activités déjà filtrées
+// (isActivityScorable) : le calcul est plafonné au niveau du jour, pas de
+// l'activité individuelle (une sortie de 30km et une de 15km le même jour
+// comptent ensemble pour 40km max, pas 40+15).
+export function computeDayScore(dayActivities: ScoredActivity[]): DayScore {
+  const dailyDistanceKm = dayActivities.reduce((sum, a) => sum + (a.distance_km ?? 0), 0);
+  const dailyElevationM = dayActivities.reduce(
+    (sum, a) => sum + (a.total_elevation_gain ?? 0),
+    0
+  );
+
+  const distance_points = DISTANCE_POINTS_PER_KM * Math.min(dailyDistanceKm, MAX_DAILY_DISTANCE_KM);
+  const dplus_points = Math.floor(
+    Math.min(dailyElevationM, MAX_DAILY_ELEVATION_M) / ELEVATION_POINTS_PER_METERS
+  );
+  const participation_points =
+    dayActivities.length >= 2
+      ? PARTICIPATION_FIRST + PARTICIPATION_SECOND
+      : dayActivities.length === 1
+        ? PARTICIPATION_FIRST
+        : 0;
+
+  return {
+    distance_points,
+    dplus_points,
+    participation_points,
+    total_points: distance_points + dplus_points + participation_points,
+  };
 }
 
 // Score hebdomadaire d'un utilisateur à partir de ses activités de la
@@ -32,8 +77,7 @@ export function computeUserWeeklyScore(activities: ScoredActivity[]): WeeklyScor
   const byDay = new Map<string, ScoredActivity[]>();
 
   for (const activity of activities) {
-    const distanceKm = activity.distance_km ?? 0;
-    if (distanceKm < MIN_VALID_DISTANCE_KM) continue; // anti-spam
+    if (!isActivityScorable(activity)) continue;
 
     const day = byDay.get(activity.activity_date) ?? [];
     day.push(activity);
@@ -41,26 +85,14 @@ export function computeUserWeeklyScore(activities: ScoredActivity[]): WeeklyScor
   }
 
   let base_points = 0;
+  let distance_points = 0;
+  let dplus_points = 0;
 
   for (const dayActivities of byDay.values()) {
-    const dailyDistanceKm = dayActivities.reduce((sum, a) => sum + (a.distance_km ?? 0), 0);
-    const dailyElevationM = dayActivities.reduce(
-      (sum, a) => sum + (a.total_elevation_gain ?? 0),
-      0
-    );
-
-    const distancePoints = DISTANCE_POINTS_PER_KM * Math.min(dailyDistanceKm, MAX_DAILY_DISTANCE_KM);
-    const elevationPoints = Math.floor(
-      Math.min(dailyElevationM, MAX_DAILY_ELEVATION_M) / ELEVATION_POINTS_PER_METERS
-    );
-    const participationPoints =
-      dayActivities.length >= 2
-        ? PARTICIPATION_FIRST + PARTICIPATION_SECOND
-        : dayActivities.length === 1
-          ? PARTICIPATION_FIRST
-          : 0;
-
-    base_points += distancePoints + elevationPoints + participationPoints;
+    const day = computeDayScore(dayActivities);
+    distance_points += day.distance_points;
+    dplus_points += day.dplus_points;
+    base_points += day.total_points;
   }
 
   const distinctActiveDays = byDay.size;
@@ -71,6 +103,8 @@ export function computeUserWeeklyScore(activities: ScoredActivity[]): WeeklyScor
 
   return {
     base_points,
+    distance_points,
+    dplus_points,
     progression_bonus,
     regularity_bonus,
     total_points: base_points + progression_bonus + regularity_bonus,
@@ -130,6 +164,8 @@ export async function computeWeeklyScores(
       user_id,
       week_start_date: weekStartStr,
       base_points: score.base_points,
+      distance_points: score.distance_points,
+      dplus_points: score.dplus_points,
       progression_bonus: score.progression_bonus,
       regularity_bonus: score.regularity_bonus,
       total_points: score.total_points,

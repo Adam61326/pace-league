@@ -118,6 +118,7 @@ export async function getValidAccessToken(
 
 export interface StravaActivityDetail {
   id: number;
+  name: string;
   distance: number; // mètres
   moving_time: number; // secondes
   average_speed: number; // m/s

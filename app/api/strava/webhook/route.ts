@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
     {
       user_id: user.id,
       strava_activity_id: String(activity.id),
+      name: activity.name,
       distance_km: activity.distance / 1000,
       moving_time_seconds: activity.moving_time,
       avg_speed_kmh: avgSpeedKmh,
