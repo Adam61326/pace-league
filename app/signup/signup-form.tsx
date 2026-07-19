@@ -51,17 +51,17 @@ export function SignupForm() {
 
   if (confirmationSent) {
     return (
-      <p className="max-w-sm text-center text-sm text-zinc-600 dark:text-zinc-400">
-        Un e-mail de confirmation a été envoyé à <strong>{email}</strong>. Suivez le
-        lien qu&apos;il contient pour activer votre compte.
+      <p className="text-center text-sm text-zinc-300">
+        Un e-mail de confirmation a été envoyé à <strong className="text-white">{email}</strong>.
+        Suivez le lien qu&apos;il contient pour activer votre compte.
       </p>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="email" className="text-sm font-medium">
+        <label htmlFor="email" className="text-sm font-medium text-zinc-300">
           E-mail
         </label>
         <input
@@ -71,11 +71,11 @@ export function SignupForm() {
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/[.145] dark:focus:border-white/40"
+          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#39D353]"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="password" className="text-sm font-medium">
+        <label htmlFor="password" className="text-sm font-medium text-zinc-300">
           Mot de passe
         </label>
         <input
@@ -86,11 +86,11 @@ export function SignupForm() {
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/[.145] dark:focus:border-white/40"
+          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#39D353]"
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="country" className="text-sm font-medium">
+        <label htmlFor="country" className="text-sm font-medium text-zinc-300">
           Pays
         </label>
         <select
@@ -98,29 +98,29 @@ export function SignupForm() {
           required
           value={countryCode}
           onChange={(e) => setCountryCode(e.target.value)}
-          className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/[.145] dark:focus:border-white/40"
+          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-[#39D353]"
         >
-          <option value="" disabled>
+          <option value="" disabled className="bg-[#141414] text-white">
             Sélectionnez un pays
           </option>
           {countries.map((c) => (
-            <option key={c.code} value={c.code}>
+            <option key={c.code} value={c.code} className="bg-[#141414] text-white">
               {c.name}
             </option>
           ))}
         </select>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+        className="flex h-11 w-full items-center justify-center rounded-full bg-[#39D353] px-5 text-sm font-semibold text-black transition-colors hover:bg-[#2fb845] disabled:opacity-50"
       >
         {loading ? "Création…" : "Créer mon compte"}
       </button>
-      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="text-center text-sm text-zinc-400">
         Déjà inscrit ?{" "}
-        <Link href="/login" className="font-medium underline">
+        <Link href="/login" className="font-medium text-white underline">
           Se connecter
         </Link>
       </p>

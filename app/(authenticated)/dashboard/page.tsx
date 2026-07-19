@@ -1,6 +1,7 @@
 import { getCountryName } from "@/lib/countries";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { StravaActions } from "./strava-actions";
 
 const STRAVA_ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Vous avez refusé l'accès à votre compte Strava.",
@@ -66,14 +67,7 @@ export default async function DashboardPage({
           </p>
         </div>
 
-        {!isStravaConnected && (
-          <a
-            href="/api/strava/connect"
-            className="flex h-11 w-full items-center justify-center rounded-full bg-[#FC4C02] px-5 text-sm font-medium text-white transition-colors hover:bg-[#e04502]"
-          >
-            Connecter mon compte Strava
-          </a>
-        )}
+        <StravaActions isConnected={isStravaConnected} />
       </div>
     </div>
   );
