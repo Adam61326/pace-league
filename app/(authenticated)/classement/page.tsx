@@ -1,4 +1,5 @@
 import { getCountryFlag } from "@/lib/countries";
+import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -7,12 +8,6 @@ import { redirect } from "next/navigation";
 
 // Filet de sécurité simple, pas une vraie pagination (hors scope de ce sprint).
 const MAX_ROWS = 200;
-
-function formatDisplayName(firstname: string | null, lastname: string | null): string {
-  if (!firstname) return "Coureur Strava";
-  const lastInitial = lastname ? `${lastname.charAt(0).toUpperCase()}.` : "";
-  return [firstname, lastInitial].filter(Boolean).join(" ");
-}
 
 interface LeaderboardUser {
   strava_firstname: string | null;

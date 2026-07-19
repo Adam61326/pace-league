@@ -1,6 +1,5 @@
 import { getCountryName } from "@/lib/countries";
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
 const STRAVA_ERROR_MESSAGES: Record<string, string> = {
@@ -75,29 +74,6 @@ export default async function DashboardPage({
             Connecter mon compte Strava
           </a>
         )}
-
-        <Link
-          href="/classement"
-          className="flex h-11 w-full items-center justify-center rounded-full border border-black/[.08] px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-        >
-          Voir le classement
-        </Link>
-
-        <Link
-          href="/ligues"
-          className="flex h-11 w-full items-center justify-center rounded-full border border-black/[.08] px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-        >
-          Voir les ligues par pays
-        </Link>
-
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="flex h-11 w-full items-center justify-center rounded-full border border-black/[.08] px-5 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-          >
-            Se déconnecter
-          </button>
-        </form>
       </div>
     </div>
   );
