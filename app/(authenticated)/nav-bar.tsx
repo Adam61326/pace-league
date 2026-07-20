@@ -2,12 +2,10 @@
 
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
-import { getCountryName } from "@/lib/countries";
 import { IconChevronDown } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { StravaActions } from "./strava-actions";
 
 // Sprint 11 : navigation consolidée à 3 onglets. "Mes activités" et "Ligues
 // privées" restent fonctionnelles à leurs URLs habituelles, mais ne sont
@@ -37,8 +35,6 @@ export function NavBar({
   photoUrl,
   name,
   email,
-  countryCode,
-  isStravaConnected,
 }: {
   userId: string;
   firstname: string | null;
@@ -46,8 +42,6 @@ export function NavBar({
   photoUrl: string | null;
   name: string;
   email: string;
-  countryCode: string | null;
-  isStravaConnected: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -104,21 +98,12 @@ export function NavBar({
                 <p className="truncate text-xs text-zinc-400">{email}</p>
               </div>
 
-              <div className="flex flex-col gap-2 border-b border-white/10 px-3 py-3 text-xs">
-                <p className="flex items-center justify-between">
-                  <span className="text-zinc-400">Pays</span>
-                  <span className="text-white">
-                    {countryCode ? getCountryName(countryCode) : "—"}
-                  </span>
-                </p>
-                <p className="flex items-center justify-between">
-                  <span className="text-zinc-400">Strava</span>
-                  <span className="text-white">
-                    {isStravaConnected ? "connecté" : "non connecté"}
-                  </span>
-                </p>
-                <StravaActions isConnected={isStravaConnected} />
-              </div>
+              <Link
+                href="/parametres"
+                className="flex w-full items-center px-3 py-2 text-left text-sm text-zinc-400 hover:bg-white/[.06] hover:text-white"
+              >
+                Paramètres
+              </Link>
 
               <form action="/auth/signout" method="post">
                 <button

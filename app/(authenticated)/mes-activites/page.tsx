@@ -9,6 +9,7 @@ import {
   type ScoredActivity,
 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
+import { IconTemperature, IconWind } from "@tabler/icons-react";
 import { redirect } from "next/navigation";
 
 const WEEKS_OF_HISTORY = 4;
@@ -23,6 +24,8 @@ interface ActivityRow extends ScoredActivity {
   moving_time_seconds: number | null;
   route_polyline: string | null;
   photo_url: string | null;
+  weather_temp_celsius: number | null;
+  weather_wind_kmh: number | null;
 }
 
 function formatDay(dateStr: string): string {
@@ -57,7 +60,7 @@ export default async function MesActivitesPage() {
   const { data: rows } = await supabase
     .from("activities")
     .select(
-      "id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds, route_polyline, photo_url"
+      "id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds, route_polyline, photo_url, weather_temp_celsius, weather_wind_kmh"
     )
     .eq("user_id", user.id)
     .gte("activity_date", toDateString(rangeStart))
@@ -73,7 +76,11 @@ export default async function MesActivitesPage() {
     moving_time_seconds: r.moving_time_seconds,
     route_polyline: r.route_polyline,
     photo_url: r.photo_url,
+    weather_temp_celsius: r.weather_temp_celsius === null ? null : Number(r.weather_temp_celsius),
+    weather_wind_kmh: r.weather_wind_kmh === null ? null : Number(r.weather_wind_kmh),
   }));
+
+  const hasAnyWeather = activities.some((a) => a.weather_temp_celsius != null);
 
   // Groupe par semaine (lundi) puis par jour, semaine/jour les plus récents
   // en premier.
@@ -168,6 +175,20 @@ export default async function MesActivitesPage() {
                                       {MIN_VALID_DISTANCE_KM} km)
                                     </span>
                                   )}
+                                  {activity.weather_temp_celsius != null && (
+                                    <div className="flex items-center gap-3 text-xs text-zinc-400">
+                                      <span className="flex items-center gap-1">
+                                        <IconTemperature size={14} stroke={1.75} />
+                                        {Math.round(activity.weather_temp_celsius)}°C
+                                      </span>
+                                      {activity.weather_wind_kmh != null && (
+                                        <span className="flex items-center gap-1">
+                                          <IconWind size={14} stroke={1.75} />
+                                          {Math.round(activity.weather_wind_kmh)} km/h
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                   {hasMedia && (
                                     <div className="flex gap-2">
                                       {activity.route_polyline && (
@@ -197,6 +218,21 @@ export default async function MesActivitesPage() {
               );
             })}
           </div>
+        )}
+
+        {hasAnyWeather && (
+          <p className="text-xs text-zinc-600">
+            Météo par{" "}
+            <a
+              href="https://open-meteo.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:text-zinc-400"
+            >
+              Open-Meteo.com
+            </a>{" "}
+            (CC-BY 4.0)
+          </p>
         )}
       </div>
     </div>

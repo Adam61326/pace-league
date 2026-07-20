@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // "/" (classement mondial) et "/classement" (redirect) restent publics —
 // voir Sprint 11 : la page d'accueil EST le classement, accessible sans
 // connexion.
-const PROTECTED_PATHS = ["/dashboard", "/ligues", "/ligues-privees", "/mes-activites"];
+const PROTECTED_PATHS = ["/dashboard", "/ligues", "/ligues-privees", "/mes-activites", "/parametres"];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

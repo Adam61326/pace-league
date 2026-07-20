@@ -1,10 +1,13 @@
 import { ContributionCalendar } from "@/components/contribution-calendar";
+import { PerformanceRadar } from "@/components/performance-radar";
 import { RouteMap } from "@/components/route-map";
 import { SubTabs } from "@/components/sub-tabs";
+import { computePerformanceAxes } from "@/lib/performance";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
 import { createClient } from "@/lib/supabase/server";
 import {
+  IconActivity,
   IconCalendarCheck,
   IconClock,
   IconHeartbeat,
@@ -48,6 +51,20 @@ function formatShortDate(dateStr: string): string {
   });
 }
 
+// Distances standard affichées, dans cet ordre — best_efforts peut contenir
+// d'autres libellés Strava (ex: "400m", "1 mile") qu'on capture tous mais
+// n'affiche pas ici pour rester lisible. Casse exacte des libellés Strava
+// vérifiée en base ("5K"/"10K"/"15K", pas "5k") : ne pas la "normaliser".
+const STANDARD_DISTANCES = ["5K", "10K", "15K", "Half-Marathon", "Marathon"];
+
+function formatDuration(totalSeconds: number): string {
+  const h = Math.floor(totalSeconds / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.round(totalSeconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 // Liste de WEEKS_OF_TREND lundis consécutifs, se terminant sur `weekStart`
 // (semaine en cours incluse).
 function weekStartsBack(weekStart: Date, count: number): string[] {
@@ -84,6 +101,19 @@ export default async function DashboardPage({
   const weekEndStr = toDateString(weekEnd);
 
   const streakDays = await getStreak(supabase, user.id);
+
+  const { data: hrProfile } = await supabase
+    .from("users")
+    .select("hr_max, hr_rest")
+    .eq("id", user.id)
+    .single();
+
+  const performanceAxes = await computePerformanceAxes(
+    supabase,
+    user.id,
+    hrProfile?.hr_max ?? null,
+    hrProfile?.hr_rest ?? null
+  );
 
   // Résumé "cette semaine" : toutes les activités synchronisées de la
   // semaine (pas seulement celles qui comptent pour le score — le seuil
@@ -202,6 +232,25 @@ export default async function DashboardPage({
   ]);
 
   const hasAnyRecord = Boolean(longestRun || biggestClimb || bestPaceActivity);
+
+  // Records par distance standard (best_efforts Strava) : table petite par
+  // utilisateur, on récupère tout et on garde le meilleur (temps le plus
+  // court) par distance_label en mémoire plutôt que 5 requêtes séparées.
+  const { data: bestEffortsRows } = await supabase
+    .from("best_efforts")
+    .select("distance_label, elapsed_time_seconds, achieved_at")
+    .eq("user_id", user.id);
+
+  const bestEffortByDistance = new Map<string, { elapsedTimeSeconds: number; achievedAt: string }>();
+  for (const row of bestEffortsRows ?? []) {
+    const current = bestEffortByDistance.get(row.distance_label);
+    if (!current || row.elapsed_time_seconds < current.elapsedTimeSeconds) {
+      bestEffortByDistance.set(row.distance_label, {
+        elapsedTimeSeconds: row.elapsed_time_seconds,
+        achievedAt: row.achieved_at,
+      });
+    }
+  }
 
   // Dernière activité synchronisée, pour la mise en avant tracé/photo.
   const { data: latestActivity } = await supabase
@@ -396,6 +445,75 @@ export default async function DashboardPage({
               </div>
             </div>
           )}
+        </section>
+
+        {/* Records par distance (best_efforts Strava) */}
+        {bestEffortByDistance.size > 0 && (
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+              Records par distance
+            </h2>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {STANDARD_DISTANCES.map((label) => {
+                const best = bestEffortByDistance.get(label);
+                return (
+                  <div
+                    key={label}
+                    className="flex flex-col gap-1 rounded-md border border-white/10 p-4"
+                  >
+                    <span className="text-lg font-semibold tracking-tight text-white">
+                      {best ? formatDuration(best.elapsedTimeSeconds) : "—"}
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      {label}
+                      {best && ` · ${formatShortDate(best.achievedAt)}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Performance à 4 axes */}
+        <section className="flex flex-col gap-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+            <IconActivity size={16} stroke={1.75} />
+            Performance
+          </h2>
+          <div className="flex flex-wrap items-start gap-6">
+            <PerformanceRadar axes={performanceAxes} />
+            <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2" style={{ minWidth: 240 }}>
+              {performanceAxes.map((axis) => (
+                <div key={axis.key} className="flex flex-col gap-1 rounded-md border border-white/10 p-4">
+                  <span className="text-sm font-medium text-white">{axis.label}</span>
+                  {axis.percentile != null ? (
+                    <>
+                      <span className="text-lg font-semibold tracking-tight text-white">
+                        {axis.percentile}e percentile
+                      </span>
+                      {axis.detail && <span className="text-xs text-zinc-400">{axis.detail}</span>}
+                      {axis.trend && (
+                        <span
+                          className={`text-xs font-medium ${
+                            axis.trend === "hausse"
+                              ? "text-green-400"
+                              : axis.trend === "baisse"
+                                ? "text-red-400"
+                                : "text-zinc-400"
+                          }`}
+                        >
+                          Tendance : {axis.trend}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-xs text-zinc-400">{axis.unavailableReason}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         {/* Tendance 4 semaines */}

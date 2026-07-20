@@ -148,6 +148,11 @@ export interface StravaActivityDetail {
   // Absent (pas juste 0) si l'activité n'a pas de donnée cardiaque.
   average_heartrate?: number | null;
   map?: { summary_polyline?: string | null } | null;
+  // Segments de distance standard (name: "5k", "10k", "Half-Marathon"...)
+  // détectés par Strava dans l'activité, quand un effort continu les couvre.
+  // Absent si l'activité est trop courte ou trop irrégulière pour qu'aucun
+  // segment standard ne s'y prête.
+  best_efforts?: { name: string; elapsed_time: number }[] | null;
 }
 
 export interface StravaActivityPhoto {
