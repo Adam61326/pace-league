@@ -1,5 +1,6 @@
 import { ContributionCalendar } from "@/components/contribution-calendar";
 import { RouteMap } from "@/components/route-map";
+import { SubTabs } from "@/components/sub-tabs";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +23,10 @@ const STRAVA_ERROR_MESSAGES: Record<string, string> = {
 
 const WEEKS_OF_TREND = 4;
 const CALENDAR_WEEKS = 12;
+const DASHBOARD_TABS = [
+  { href: "/dashboard", label: "Vue d'ensemble" },
+  { href: "/mes-activites", label: "Mes activités" },
+];
 
 function formatPace(secPerKm: number | null): string {
   if (secPerKm == null) return "—";
@@ -223,12 +228,15 @@ export default async function DashboardPage({
   return (
     <div className="flex flex-1 flex-col items-center gap-10 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-10">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
-          <p className="text-sm text-zinc-400">
-            Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
-            {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
-          </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
+            <p className="text-sm text-zinc-400">
+              Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
+              {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
+            </p>
+          </div>
+          <SubTabs tabs={DASHBOARD_TABS} activeHref="/dashboard" />
         </div>
 
         {strava === "connected" && (

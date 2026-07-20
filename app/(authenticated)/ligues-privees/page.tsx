@@ -1,3 +1,4 @@
+import { SubTabs } from "@/components/sub-tabs";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,6 +10,11 @@ interface LeagueRow {
   code: string;
   league_members: { count: number }[];
 }
+
+const LEAGUES_TABS = [
+  { href: "/ligues", label: "Par pays" },
+  { href: "/ligues-privees", label: "Privées" },
+];
 
 export default async function LiguesPriveesPage() {
   const supabase = await createClient();
@@ -33,12 +39,15 @@ export default async function LiguesPriveesPage() {
   return (
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Mes ligues privées</h1>
-          <p className="text-sm text-zinc-400">
-            Défie tes amis ou ton club dans une ligue privée, indépendante des classements
-            pays/monde.
-          </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Mes ligues privées</h1>
+            <p className="text-sm text-zinc-400">
+              Défie tes amis ou ton club dans une ligue privée, indépendante des classements
+              pays/monde.
+            </p>
+          </div>
+          <SubTabs tabs={LEAGUES_TABS} activeHref="/ligues-privees" />
         </div>
 
         {leagues.length === 0 ? (

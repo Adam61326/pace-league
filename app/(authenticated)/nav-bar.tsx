@@ -9,13 +9,26 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { StravaActions } from "./strava-actions";
 
+// Sprint 11 : navigation consolidée à 3 onglets. "Mes activités" et "Ligues
+// privées" restent fonctionnelles à leurs URLs habituelles, mais ne sont
+// plus atteignables que via les sous-onglets de "Tableau de bord" / "Ligues"
+// (voir SubTabs sur ces pages), pas depuis la navbar principale.
 const NAV_LINKS = [
+  { href: "/", label: "Classement" },
   { href: "/dashboard", label: "Tableau de bord" },
-  { href: "/mes-activites", label: "Mes activités" },
-  { href: "/classement", label: "Classement" },
   { href: "/ligues", label: "Ligues" },
-  { href: "/ligues-privees", label: "Ligues privées" },
 ];
+
+// "/dashboard" reste actif sur sa sous-page "/mes-activites", "/ligues" sur
+// "/ligues-privees" (et ses sous-routes) : groupement ad hoc plutôt qu'un
+// simple startsWith, qui matcherait "/ligues-privees" sous "/ligues" par
+// erreur autrement.
+function isNavActive(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  if (href === "/dashboard") return pathname === "/dashboard" || pathname.startsWith("/mes-activites");
+  if (href === "/ligues") return pathname === "/ligues" || pathname.startsWith("/ligues-privees");
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function NavBar({
   userId,
@@ -53,14 +66,13 @@ export function NavBar({
   return (
     <header className="sticky top-0 z-10 border-b border-white/10 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-5xl items-center gap-6 px-6">
-        <Link href="/dashboard">
+        <Link href="/">
           <Logo size="sm" />
         </Link>
 
         <nav className="flex flex-1 items-center gap-1">
           {NAV_LINKS.map((link) => {
-            const isActive =
-              pathname === link.href || pathname.startsWith(`${link.href}/`);
+            const isActive = isNavActive(pathname, link.href);
             return (
               <Link
                 key={link.href}

@@ -1,4 +1,5 @@
 import { RouteMap } from "@/components/route-map";
+import { SubTabs } from "@/components/sub-tabs";
 import {
   computeDayScore,
   getWeekBounds,
@@ -11,6 +12,10 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 const WEEKS_OF_HISTORY = 4;
+const DASHBOARD_TABS = [
+  { href: "/dashboard", label: "Vue d'ensemble" },
+  { href: "/mes-activites", label: "Mes activités" },
+];
 
 interface ActivityRow extends ScoredActivity {
   id: string;
@@ -87,17 +92,20 @@ export default async function MesActivitesPage() {
   return (
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Mes activités</h1>
-          <p className="text-sm text-zinc-400">
-            {WEEKS_OF_HISTORY} dernières semaines, jour par jour.
-          </p>
-          <p className="mt-2 text-xs text-zinc-500">
-            Seules les activités qui passent les filtres GPS et vitesse sont synchronisées
-            depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Seul le
-            filtre anti-spam sur la distance (moins de {MIN_VALID_DISTANCE_KM} km) s&apos;applique
-            sur les activités listées ci-dessous.
-          </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Mes activités</h1>
+            <p className="text-sm text-zinc-400">
+              {WEEKS_OF_HISTORY} dernières semaines, jour par jour.
+            </p>
+            <p className="mt-2 text-xs text-zinc-500">
+              Seules les activités qui passent les filtres GPS et vitesse sont synchronisées
+              depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Seul le
+              filtre anti-spam sur la distance (moins de {MIN_VALID_DISTANCE_KM} km) s&apos;applique
+              sur les activités listées ci-dessous.
+            </p>
+          </div>
+          <SubTabs tabs={DASHBOARD_TABS} activeHref="/mes-activites" />
         </div>
 
         {weeks.length === 0 ? (

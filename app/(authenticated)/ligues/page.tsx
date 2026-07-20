@@ -1,3 +1,4 @@
+import { SubTabs } from "@/components/sub-tabs";
 import { getCountryFlag, getCountryName } from "@/lib/countries";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,10 @@ import { redirect } from "next/navigation";
 
 type Division = "A" | "B" | "C";
 const DIVISIONS: Division[] = ["A", "B", "C"];
+const LEAGUES_TABS = [
+  { href: "/ligues", label: "Par pays" },
+  { href: "/ligues-privees", label: "Privées" },
+];
 
 interface CountryScoreRow {
   country_code: string;
@@ -51,12 +56,15 @@ export default async function LiguesPage({
   return (
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Ligues par pays</h1>
-          <p className="text-sm text-zinc-400">
-            Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
-            {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
-          </p>
+        <div className="flex flex-col gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-white">Ligues par pays</h1>
+            <p className="text-sm text-zinc-400">
+              Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
+              {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
+            </p>
+          </div>
+          <SubTabs tabs={LEAGUES_TABS} activeHref="/ligues" />
         </div>
 
         <div className="flex gap-2">
