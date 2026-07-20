@@ -1,6 +1,10 @@
 import { encryptToken } from "@/lib/crypto";
 import { createClient } from "@/lib/supabase/server";
-import { exchangeStravaCode, STRAVA_OAUTH_STATE_COOKIE } from "@/lib/strava";
+import {
+  exchangeStravaCode,
+  normalizeProfilePhotoUrl,
+  STRAVA_OAUTH_STATE_COOKIE,
+} from "@/lib/strava";
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
@@ -46,6 +50,9 @@ export async function GET(request: NextRequest) {
         strava_token_expires_at: new Date(tokenResponse.expires_at * 1000).toISOString(),
         strava_firstname: tokenResponse.athlete.firstname || null,
         strava_lastname: tokenResponse.athlete.lastname || null,
+        strava_profile_photo_url: normalizeProfilePhotoUrl(
+          tokenResponse.athlete.profile_medium ?? tokenResponse.athlete.profile
+        ),
       })
       .eq("id", user.id);
 

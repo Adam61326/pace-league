@@ -1,4 +1,3 @@
-import { initials as computeInitials } from "@/lib/display-name";
 import { createClient } from "@/lib/supabase/server";
 import { NavBar } from "./nav-bar";
 
@@ -19,13 +18,9 @@ export default async function AuthenticatedLayout({
 
   const { data: profile } = await supabase
     .from("users")
-    .select("strava_firstname, strava_lastname")
+    .select("strava_firstname, strava_lastname, strava_profile_photo_url")
     .eq("id", user.id)
     .single();
-
-  const displayInitials =
-    computeInitials(profile?.strava_firstname ?? null, profile?.strava_lastname ?? null, "") ||
-    user.email!.charAt(0).toUpperCase();
 
   const displayName =
     profile?.strava_firstname != null
@@ -33,8 +28,14 @@ export default async function AuthenticatedLayout({
       : user.email!;
 
   return (
-    <div className="flex flex-1 flex-col">
-      <NavBar initials={displayInitials} name={displayName} />
+    <div className="flex flex-1 flex-col bg-background">
+      <NavBar
+        userId={user.id}
+        firstname={profile?.strava_firstname ?? null}
+        lastname={profile?.strava_lastname ?? null}
+        photoUrl={profile?.strava_profile_photo_url ?? null}
+        name={displayName}
+      />
       <div className="flex flex-1 flex-col">{children}</div>
     </div>
   );

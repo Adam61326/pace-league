@@ -51,7 +51,7 @@ export function LoginForm({
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#39D353]"
+          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-accent"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -65,14 +65,14 @@ export function LoginForm({
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#39D353]"
+          className="rounded-md border border-white/15 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-accent"
         />
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center rounded-full bg-[#39D353] px-5 text-sm font-semibold text-black transition-colors hover:bg-[#2fb845] disabled:opacity-50"
+        className="flex h-11 w-full items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-black transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
         {loading ? "Connexion…" : "Se connecter"}
       </button>

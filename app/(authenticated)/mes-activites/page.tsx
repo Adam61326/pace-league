@@ -78,14 +78,14 @@ export default async function MesActivitesPage() {
   const weeks = Array.from(byWeek.entries()).sort((a, b) => (a[0] < b[0] ? 1 : -1));
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-8 bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Mes activités</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Mes activités</h1>
+          <p className="text-sm text-zinc-400">
             {WEEKS_OF_HISTORY} dernières semaines, jour par jour.
           </p>
-          <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-500">
+          <p className="mt-2 text-xs text-zinc-500">
             Seules les activités qui passent les filtres GPS et vitesse sont synchronisées
             depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Seul le
             filtre anti-spam sur la distance (moins de {MIN_VALID_DISTANCE_KM} km) s&apos;applique
@@ -94,9 +94,7 @@ export default async function MesActivitesPage() {
         </div>
 
         {weeks.length === 0 ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Aucune activité synchronisée sur cette période.
-          </p>
+          <p className="text-sm text-zinc-400">Aucune activité synchronisée sur cette période.</p>
         ) : (
           <div className="flex flex-col gap-10">
             {weeks.map(([weekStartStr, days]) => {
@@ -110,7 +108,7 @@ export default async function MesActivitesPage() {
 
               return (
                 <section key={weekStartStr} className="flex flex-col gap-4">
-                  <h2 className="text-sm font-semibold tracking-tight text-zinc-500 dark:text-zinc-400">
+                  <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
                     Semaine du {weekStartDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
                     {weekEndDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
                   </h2>
@@ -122,17 +120,16 @@ export default async function MesActivitesPage() {
                         scorable.length > 0 ? computeDayScore(scorable).total_points : 0;
 
                       return (
-                        <div
-                          key={day}
-                          className="rounded-md border border-black/[.08] dark:border-white/[.145]"
-                        >
-                          <div className="flex items-center justify-between border-b border-black/[.08] px-4 py-2 dark:border-white/[.145]">
-                            <span className="text-sm font-medium capitalize">{formatDay(day)}</span>
-                            <span className="text-sm font-semibold">
+                        <div key={day} className="rounded-md border border-white/10">
+                          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+                            <span className="text-sm font-medium text-white capitalize">
+                              {formatDay(day)}
+                            </span>
+                            <span className="text-sm font-semibold text-white">
                               {dayScore > 0 ? `${dayScore.toFixed(1)} pts` : "0 pt"}
                             </span>
                           </div>
-                          <ul className="flex flex-col divide-y divide-black/[.08] dark:divide-white/[.145]">
+                          <ul className="flex flex-col divide-y divide-white/10">
                             {dayActivities.map((activity) => {
                               const excluded = !isActivityScorable(activity);
                               return (
@@ -141,16 +138,16 @@ export default async function MesActivitesPage() {
                                   className="flex flex-col gap-1 px-4 py-3 text-sm"
                                 >
                                   <div className="flex items-center justify-between gap-3">
-                                    <span className="font-medium">
+                                    <span className="font-medium text-white">
                                       {activity.name?.trim() || "Sortie course à pied"}
                                     </span>
-                                    <span className="shrink-0 text-zinc-600 dark:text-zinc-400">
+                                    <span className="shrink-0 text-zinc-400">
                                       {(activity.distance_km ?? 0).toFixed(2)} km ·{" "}
                                       {Math.round(activity.total_elevation_gain ?? 0)} m D+
                                     </span>
                                   </div>
                                   {excluded && (
-                                    <span className="text-xs text-amber-700 dark:text-amber-400">
+                                    <span className="text-xs text-amber-400">
                                       Exclue du score : distance sous le seuil anti-spam (
                                       {MIN_VALID_DISTANCE_KM} km)
                                     </span>

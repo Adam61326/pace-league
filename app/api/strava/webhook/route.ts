@@ -1,7 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchStravaActivity,
+  fetchStravaAthlete,
   getValidAccessToken,
+  normalizeProfilePhotoUrl,
   type StravaActivityDetail,
 } from "@/lib/strava";
 import { NextResponse, type NextRequest } from "next/server";
@@ -75,6 +77,24 @@ export async function POST(request: NextRequest) {
     // retente. On log et on acquitte.
     console.error("strava webhook: token refresh failed", user.id, err);
     return NextResponse.json({});
+  }
+
+  // Best-effort : les événements d'activité ne portent pas la photo de
+  // l'athlète, donc on la rafraîchit à chaque activité reçue (l'athlète a pu
+  // la changer depuis la dernière connexion). Un échec ici ne doit jamais
+  // bloquer l'ingestion de l'activité, qui est le rôle principal du webhook.
+  try {
+    const athlete = await fetchStravaAthlete(accessToken);
+    await admin
+      .from("users")
+      .update({
+        strava_profile_photo_url: normalizeProfilePhotoUrl(
+          athlete.profile_medium ?? athlete.profile
+        ),
+      })
+      .eq("id", user.id);
+  } catch (err) {
+    console.error("strava webhook: athlete photo refresh failed", user.id, err);
   }
 
   let activity: StravaActivityDetail;

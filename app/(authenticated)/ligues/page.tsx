@@ -49,11 +49,11 @@ export default async function LiguesPage({
   const countries = rows ?? [];
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-8 bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Ligues par pays</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Ligues par pays</h1>
+          <p className="text-sm text-zinc-400">
             Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
             {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
           </p>
@@ -66,8 +66,8 @@ export default async function LiguesPage({
               href={`/ligues?division=${d}`}
               className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                 division === d
-                  ? "bg-foreground text-background"
-                  : "border border-black/[.08] hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+                  ? "bg-accent text-black"
+                  : "border border-white/10 text-zinc-300 hover:bg-white/[.06]"
               }`}
             >
               Division {d}
@@ -76,12 +76,12 @@ export default async function LiguesPage({
         </div>
 
         {countries.length === 0 ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="text-sm text-zinc-400">
             Aucun pays classé en division {division} cette semaine pour le moment.
           </p>
         ) : (
           <>
-            <ol className="flex flex-col divide-y divide-black/[.08] rounded-md border border-black/[.08] dark:divide-white/[.145] dark:border-white/[.145]">
+            <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
               {countries.map((row, index) => {
                 // Promotion : 2 premiers, sauf en division A (personne au-dessus).
                 const isPromotion = division !== "A" && index < 2;
@@ -93,36 +93,38 @@ export default async function LiguesPage({
                     key={row.country_code}
                     className={`flex items-center gap-3 px-4 py-3 text-sm ${
                       isPromotion
-                        ? "bg-green-50 dark:bg-green-950/30"
+                        ? "bg-green-500/10"
                         : isRelegation
-                          ? "bg-red-50 dark:bg-red-950/30"
+                          ? "bg-red-500/10"
                           : ""
                     }`}
                   >
-                    <span className="w-6 text-right text-zinc-500 dark:text-zinc-400">
-                      {index + 1}
-                    </span>
+                    <span className="w-6 text-right text-zinc-400">{index + 1}</span>
                     <span aria-hidden>{getCountryFlag(row.country_code)}</span>
-                    <span className="flex-1 font-medium">{getCountryName(row.country_code)}</span>
-                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="flex-1 font-medium text-white">
+                      {getCountryName(row.country_code)}
+                    </span>
+                    <span className="text-xs text-zinc-400">
                       {row.active_runners_count} coureur{row.active_runners_count > 1 ? "s" : ""}
                     </span>
-                    <span className="w-20 text-right font-semibold">{row.total_points} pts</span>
+                    <span className="w-20 text-right font-semibold text-white">
+                      {row.total_points} pts
+                    </span>
                   </li>
                 );
               })}
             </ol>
 
-            <div className="flex flex-col gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+            <div className="flex flex-col gap-1 text-xs text-zinc-400">
               {division !== "A" && (
                 <p className="flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-sm bg-green-50 dark:bg-green-950/30" />
+                  <span className="inline-block h-3 w-3 rounded-sm bg-green-500/10" />
                   Zone de promotion (montée en division {division === "B" ? "A" : "B"})
                 </p>
               )}
               {division !== "C" && (
                 <p className="flex items-center gap-2">
-                  <span className="inline-block h-3 w-3 rounded-sm bg-red-50 dark:bg-red-950/30" />
+                  <span className="inline-block h-3 w-3 rounded-sm bg-red-500/10" />
                   Zone de relégation (descente en division {division === "A" ? "B" : "C"})
                 </p>
               )}

@@ -18,16 +18,16 @@ export function WeeklyTrend({ trend }: { trend: TrendWeek[] }) {
     <div className="flex flex-col gap-2">
       {trend.map((week) => (
         <div key={week.weekStart} className="flex items-center gap-3">
-          <span className="w-16 shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="w-16 shrink-0 text-xs text-zinc-400">
             {formatWeekLabel(week.weekStart)}
           </span>
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/[.06] dark:bg-white/[.08]">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[.08]">
             <div
-              className="h-full rounded-full bg-[#2a78d6] dark:bg-[#3987e5]"
+              className="h-full rounded-full bg-accent"
               style={{ width: `${Math.max(4, (week.totalPoints / max) * 100)}%` }}
             />
           </div>
-          <span className="w-14 shrink-0 text-right text-xs font-medium tabular-nums">
+          <span className="w-14 shrink-0 text-right text-xs font-medium tabular-nums text-white">
             {week.totalPoints.toFixed(1)} pts
           </span>
         </div>

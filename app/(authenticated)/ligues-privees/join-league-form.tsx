@@ -41,7 +41,7 @@ export function JoinLeagueForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <label htmlFor="code" className="text-sm font-medium">
+      <label htmlFor="code" className="text-sm font-medium text-zinc-300">
         Rejoindre avec un code
       </label>
       <div className="flex gap-2">
@@ -53,17 +53,17 @@ export function JoinLeagueForm() {
           placeholder="K7XQ2P"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
-          className="flex-1 rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-sm uppercase outline-none focus:border-black/40 dark:border-white/[.145] dark:focus:border-white/40"
+          className="flex-1 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white uppercase outline-none placeholder:text-zinc-500 focus:border-accent"
         />
         <button
           type="submit"
           disabled={loading}
-          className="flex h-10 items-center justify-center rounded-full border border-black/[.08] px-5 text-sm font-medium transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+          className="flex h-10 items-center justify-center rounded-full border border-white/10 px-5 text-sm font-medium text-white transition-colors hover:bg-white/[.06] disabled:opacity-50"
         >
           {loading ? "…" : "Rejoindre"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
     </form>
   );
 }

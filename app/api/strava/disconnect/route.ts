@@ -64,6 +64,7 @@ export async function POST() {
       strava_token_expires_at: null,
       strava_firstname: null,
       strava_lastname: null,
+      strava_profile_photo_url: null,
     })
     .eq("id", user.id);
 

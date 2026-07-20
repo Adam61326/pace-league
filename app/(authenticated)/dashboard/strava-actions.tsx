@@ -36,12 +36,12 @@ export function StravaActions({ isConnected }: { isConnected: boolean }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="button"
         onClick={handleDisconnect}
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center rounded-full border border-black/[.08] px-5 text-sm font-medium transition-colors hover:bg-black/[.04] disabled:opacity-50 dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+        className="flex h-11 w-full items-center justify-center rounded-full border border-white/10 px-5 text-sm font-medium text-white transition-colors hover:bg-white/[.06] disabled:opacity-50"
       >
         {loading ? "Déconnexion…" : "Déconnecter Strava"}
       </button>

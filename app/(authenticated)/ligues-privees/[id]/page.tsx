@@ -1,4 +1,5 @@
-import { formatDisplayName, initials } from "@/lib/display-name";
+import { Avatar } from "@/components/avatar";
+import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -8,6 +9,7 @@ interface MemberRow {
   user_id: string;
   strava_firstname: string | null;
   strava_lastname: string | null;
+  strava_profile_photo_url: string | null;
   total_points: number;
 }
 
@@ -43,7 +45,7 @@ export default async function LiguePriveePage({
 
   const { data: members } = await admin
     .from("league_members")
-    .select("user_id, users(strava_firstname, strava_lastname)")
+    .select("user_id, users(strava_firstname, strava_lastname, strava_profile_photo_url)")
     .eq("league_id", id);
 
   const { weekStart, weekEnd } = getWeekBounds();
@@ -67,44 +69,47 @@ export default async function LiguePriveePage({
         user_id: m.user_id,
         strava_firstname: profile?.strava_firstname ?? null,
         strava_lastname: profile?.strava_lastname ?? null,
+        strava_profile_photo_url: profile?.strava_profile_photo_url ?? null,
         total_points: pointsByUser.get(m.user_id) ?? 0,
       };
     })
     .sort((a, b) => b.total_points - a.total_points);
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-8 bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{league.name}</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">{league.name}</h1>
+          <p className="text-sm text-zinc-400">
             Code : <span className="font-mono tracking-widest">{league.code}</span> · Semaine du{" "}
             {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
             {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
           </p>
         </div>
 
-        <ol className="flex flex-col divide-y divide-black/[.08] rounded-md border border-black/[.08] dark:divide-white/[.145] dark:border-white/[.145]">
+        <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
           {leaderboard.map((member, index) => {
             const isMe = member.user_id === user.id;
             return (
               <li
                 key={member.user_id}
                 className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                  isMe ? "bg-black/[.04] dark:bg-white/[.06]" : ""
+                  isMe ? "bg-white/[.06]" : ""
                 }`}
               >
-                <span className="w-6 text-right text-zinc-500 dark:text-zinc-400">
-                  {index + 1}
-                </span>
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
-                  {initials(member.strava_firstname, member.strava_lastname)}
-                </span>
-                <span className="flex-1 font-medium">
+                <span className="w-6 text-right text-zinc-400">{index + 1}</span>
+                <Avatar
+                  userId={member.user_id}
+                  photoUrl={member.strava_profile_photo_url}
+                  firstname={member.strava_firstname}
+                  lastname={member.strava_lastname}
+                  size={32}
+                />
+                <span className="flex-1 font-medium text-white">
                   {formatDisplayName(member.strava_firstname, member.strava_lastname)}
-                  {isMe && <span className="text-zinc-500 dark:text-zinc-400"> (toi)</span>}
+                  {isMe && <span className="text-zinc-400"> (toi)</span>}
                 </span>
-                <span className="font-semibold">{member.total_points} pts</span>
+                <span className="font-semibold text-white">{member.total_points} pts</span>
               </li>
             );
           })}

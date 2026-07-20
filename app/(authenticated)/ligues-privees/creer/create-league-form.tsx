@@ -49,24 +49,25 @@ export function CreateLeagueForm() {
   if (created) {
     return (
       <div className="flex w-full max-w-sm flex-col items-center gap-4 text-center">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Ligue <strong>{created.name}</strong> créée. Partage ce code pour inviter des membres :
+        <p className="text-sm text-zinc-400">
+          Ligue <strong className="text-white">{created.name}</strong> créée. Partage ce code pour
+          inviter des membres :
         </p>
         <div className="flex items-center gap-2">
-          <span className="rounded-md border border-black/[.08] px-4 py-2 font-mono text-lg tracking-widest dark:border-white/[.145]">
+          <span className="rounded-md border border-white/10 px-4 py-2 font-mono text-lg tracking-widest text-white">
             {created.code}
           </span>
           <button
             type="button"
             onClick={handleCopy}
-            className="flex h-10 items-center justify-center rounded-full border border-black/[.08] px-4 text-sm font-medium transition-colors hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
+            className="flex h-10 items-center justify-center rounded-full border border-white/10 px-4 text-sm font-medium text-white transition-colors hover:bg-white/[.06]"
           >
             {copied ? "Copié !" : "Copier"}
           </button>
         </div>
         <Link
           href={`/ligues-privees/${created.id}`}
-          className="flex h-11 w-full items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
+          className="flex h-11 w-full items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-black transition-colors hover:bg-accent-hover"
         >
           Voir le classement de la ligue
         </Link>
@@ -77,7 +78,7 @@ export function CreateLeagueForm() {
   return (
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <label htmlFor="name" className="text-sm font-medium">
+        <label htmlFor="name" className="text-sm font-medium text-zinc-300">
           Nom de la ligue
         </label>
         <input
@@ -87,14 +88,14 @@ export function CreateLeagueForm() {
           maxLength={80}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="rounded-md border border-black/[.08] bg-transparent px-3 py-2 text-sm outline-none focus:border-black/40 dark:border-white/[.145] dark:focus:border-white/40"
+          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none focus:border-accent"
         />
       </div>
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
       <button
         type="submit"
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center rounded-full bg-foreground px-5 text-sm font-medium text-background transition-colors hover:bg-[#383838] disabled:opacity-50 dark:hover:bg-[#ccc]"
+        className="flex h-11 w-full items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-black transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
         {loading ? "Création…" : "Créer la ligue"}
       </button>

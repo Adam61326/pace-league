@@ -13,8 +13,8 @@ export default async function CreerLiguePage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-zinc-50 px-6 py-16 dark:bg-black">
-      <h1 className="text-2xl font-semibold tracking-tight">Créer une ligue privée</h1>
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-background px-6 py-16">
+      <h1 className="text-2xl font-semibold tracking-tight text-white">Créer une ligue privée</h1>
       <CreateLeagueForm />
     </div>
   );

@@ -32,7 +32,26 @@ export interface StravaTokenResponse extends StravaRefreshResponse {
   // Strava renvoie ce résumé athlète dès l'échange du code, sans scope
   // supplémentaire requis (firstname/lastname peuvent être vides si
   // l'athlète a masqué son nom réel dans ses réglages de confidentialité).
-  athlete: { id: number; firstname: string; lastname: string };
+  // profile_medium/profile sont les URLs de photo (moyenne/grande) ; Strava
+  // renvoie une silhouette générique par défaut si l'athlète n'a jamais
+  // uploadé de photo, voir normalizeProfilePhotoUrl.
+  athlete: {
+    id: number;
+    firstname: string;
+    lastname: string;
+    profile_medium?: string | null;
+    profile?: string | null;
+  };
+}
+
+// Strava renvoie systématiquement une URL de photo, même sans upload : dans
+// ce cas l'URL pointe vers une silhouette générique reconnaissable par
+// "avatar/athlete/{large|medium}" dans le chemin. On ne veut jamais afficher
+// ce logo Strava par défaut sur le site : on stocke null à la place.
+export function normalizeProfilePhotoUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (/avatar\/athlete\/(large|medium)/i.test(url)) return null;
+  return url;
 }
 
 export async function exchangeStravaCode(code: string): Promise<StravaTokenResponse> {
@@ -126,6 +145,28 @@ export interface StravaActivityDetail {
   start_date_local: string; // ISO 8601
   start_latlng: [number, number] | null;
   manual: boolean;
+}
+
+export interface StravaAthleteSummary {
+  id: number;
+  profile_medium?: string | null;
+  profile?: string | null;
+}
+
+// Utilisée par le webhook : les événements d'activité ne portent que
+// owner_id, jamais la photo de l'athlète, donc un appel séparé est
+// nécessaire pour la garder à jour (l'athlète peut avoir changé sa photo
+// Strava depuis la dernière connexion).
+export async function fetchStravaAthlete(accessToken: string): Promise<StravaAthleteSummary> {
+  const response = await fetch(`${STRAVA_API_BASE}/athlete`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Strava athlete fetch failed: ${response.status}`);
+  }
+
+  return response.json();
 }
 
 export async function fetchStravaActivity(

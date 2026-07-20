@@ -1,5 +1,6 @@
 import { getCountryName } from "@/lib/countries";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
+import { getStreak } from "@/lib/streak";
 import { createClient } from "@/lib/supabase/server";
 import {
   IconCalendarCheck,
@@ -61,6 +62,8 @@ export default async function DashboardPage({
   const { weekStart, weekEnd } = getWeekBounds();
   const weekStartStr = toDateString(weekStart);
   const weekEndStr = toDateString(weekEnd);
+
+  const streakDays = await getStreak(supabase, user.id);
 
   // Résumé "cette semaine" : toutes les activités synchronisées de la
   // semaine (pas seulement celles qui comptent pour le score — le seuil
@@ -131,32 +134,47 @@ export default async function DashboardPage({
   }));
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-10 bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex flex-1 flex-col items-center gap-10 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-10">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Tableau de bord</h1>
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
+          <p className="text-sm text-zinc-400">
             Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
             {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
           </p>
         </div>
 
         {strava === "connected" && (
-          <p className="rounded-md bg-green-100 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+          <p className="rounded-md bg-green-950/60 px-3 py-2 text-sm text-green-300">
             Compte Strava connecté avec succès.
           </p>
         )}
         {stravaError && (
-          <p className="rounded-md bg-red-100 px-3 py-2 text-sm text-red-800 dark:bg-red-950 dark:text-red-300">
+          <p className="rounded-md bg-red-950/60 px-3 py-2 text-sm text-red-300">
             {STRAVA_ERROR_MESSAGES[stravaError] ?? "Une erreur est survenue."}
           </p>
         )}
 
+        {/* Série en cours (mise en avant) */}
+        {streakDays > 0 && (
+          <section className="flex items-center gap-4 rounded-2xl border border-orange-400/20 bg-gradient-to-br from-orange-500/10 to-transparent px-6 py-5">
+            <span className="text-4xl" aria-hidden>
+              🔥
+            </span>
+            <div className="flex flex-col">
+              <span className="text-2xl font-semibold tracking-tight text-white">
+                {streakDays} jour{streakDays > 1 ? "s" : ""} de série
+              </span>
+              <span className="text-sm text-zinc-400">
+                Jours consécutifs avec au moins une activité valide — continue comme ça !
+              </span>
+            </div>
+          </section>
+        )}
+
         {/* Résumé de la semaine */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-500 dark:text-zinc-400">
-            Cette semaine
-          </h2>
+          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Cette semaine</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { icon: IconRoute, label: "Distance", value: `${totalKm.toFixed(1)} km` },
@@ -166,11 +184,11 @@ export default async function DashboardPage({
             ].map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
-                className="flex flex-col gap-2 rounded-md border border-black/[.08] p-4 dark:border-white/[.145]"
+                className="flex flex-col gap-2 rounded-md border border-white/10 p-4"
               >
-                <Icon size={18} stroke={1.75} className="text-zinc-500 dark:text-zinc-400" />
-                <span className="text-lg font-semibold tracking-tight">{value}</span>
-                <span className="text-xs text-zinc-500 dark:text-zinc-400">{label}</span>
+                <Icon size={18} stroke={1.75} className="text-zinc-400" />
+                <span className="text-lg font-semibold tracking-tight text-white">{value}</span>
+                <span className="text-xs text-zinc-400">{label}</span>
               </div>
             ))}
           </div>
@@ -179,13 +197,13 @@ export default async function DashboardPage({
         {/* Répartition du score */}
         <section className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-500 dark:text-zinc-400">
+            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
               Répartition du score
             </h2>
-            <span className="text-sm font-semibold">{totalPoints.toFixed(1)} pts</span>
+            <span className="text-sm font-semibold text-white">{totalPoints.toFixed(1)} pts</span>
           </div>
           {totalPoints === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-zinc-400">
               Pas encore de score calculé cette semaine — ça se met à jour chaque nuit.
             </p>
           ) : (
@@ -193,15 +211,14 @@ export default async function DashboardPage({
               {breakdown.map(({ label, points }) => (
                 <div key={label} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
-                    <span className="font-medium">
-                      {points.toFixed(1)} pts{" "}
-                      <span className="text-zinc-500 dark:text-zinc-400">({pct(points, totalPoints)}%)</span>
+                    <span className="text-zinc-400">{label}</span>
+                    <span className="font-medium text-white">
+                      {points.toFixed(1)} pts <span className="text-zinc-400">({pct(points, totalPoints)}%)</span>
                     </span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/[.06] dark:bg-white/[.08]">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[.08]">
                     <div
-                      className="h-full rounded-full bg-[#2a78d6] dark:bg-[#3987e5]"
+                      className="h-full rounded-full bg-accent"
                       style={{ width: `${pct(points, totalPoints)}%` }}
                     />
                   </div>
@@ -213,29 +230,31 @@ export default async function DashboardPage({
 
         {/* Tendance 4 semaines */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-500 dark:text-zinc-400">
+          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
             Tendance ({WEEKS_OF_TREND} dernières semaines)
           </h2>
           <WeeklyTrend trend={trend} />
         </section>
 
         {/* Mon profil (discret) */}
-        <section className="flex flex-col gap-3 border-t border-black/[.08] pt-8 dark:border-white/[.145]">
-          <h2 className="text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400">
+        <section className="flex flex-col gap-3 border-t border-white/10 pt-8">
+          <h2 className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
             Mon profil
           </h2>
-          <div className="flex flex-col gap-2 rounded-md border border-black/[.08] p-4 text-sm dark:border-white/[.145]">
+          <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4 text-sm">
             <p>
-              <span className="text-zinc-500 dark:text-zinc-400">E-mail : </span>
-              {user.email}
+              <span className="text-zinc-400">E-mail : </span>
+              <span className="text-white">{user.email}</span>
             </p>
             <p>
-              <span className="text-zinc-500 dark:text-zinc-400">Pays : </span>
-              {profile?.country_code ? getCountryName(profile.country_code) : "—"}
+              <span className="text-zinc-400">Pays : </span>
+              <span className="text-white">
+                {profile?.country_code ? getCountryName(profile.country_code) : "—"}
+              </span>
             </p>
             <p>
-              <span className="text-zinc-500 dark:text-zinc-400">Strava : </span>
-              {isStravaConnected ? "connecté" : "non connecté"}
+              <span className="text-zinc-400">Strava : </span>
+              <span className="text-white">{isStravaConnected ? "connecté" : "non connecté"}</span>
             </p>
           </div>
           <StravaActions isConnected={isStravaConnected} />
