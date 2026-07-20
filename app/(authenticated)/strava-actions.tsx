@@ -27,7 +27,7 @@ export function StravaActions({ isConnected }: { isConnected: boolean }) {
     return (
       <a
         href="/api/strava/connect"
-        className="flex h-11 w-full items-center justify-center rounded-full bg-[#FC4C02] px-5 text-sm font-medium text-white transition-colors hover:bg-[#e04502]"
+        className="flex h-9 w-full items-center justify-center rounded-full bg-[#FC4C02] px-4 text-xs font-medium text-white transition-colors hover:bg-[#e04502]"
       >
         Connecter mon compte Strava
       </a>
@@ -35,13 +35,13 @@ export function StravaActions({ isConnected }: { isConnected: boolean }) {
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {error && <p className="text-sm text-red-400">{error}</p>}
+    <div className="flex flex-col gap-1.5">
+      {error && <p className="text-xs text-red-400">{error}</p>}
       <button
         type="button"
         onClick={handleDisconnect}
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center rounded-full border border-white/10 px-5 text-sm font-medium text-white transition-colors hover:bg-white/[.06] disabled:opacity-50"
+        className="flex h-9 w-full items-center justify-center rounded-full border border-white/10 px-4 text-xs font-medium text-white transition-colors hover:bg-white/[.06] disabled:opacity-50"
       >
         {loading ? "Déconnexion…" : "Déconnecter Strava"}
       </button>

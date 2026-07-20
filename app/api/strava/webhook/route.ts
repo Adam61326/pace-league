@@ -1,7 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   fetchStravaActivity,
+  fetchStravaActivityPhotos,
   fetchStravaAthlete,
+  firstPhotoUrl,
   getValidAccessToken,
   normalizeProfilePhotoUrl,
   type StravaActivityDetail,
@@ -112,6 +114,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({});
   }
 
+  // Best-effort : une activité sans photo attachée est un cas normal, pas
+  // une erreur. Un échec ici ne doit jamais bloquer l'insertion de
+  // l'activité elle-même.
+  let photoUrl: string | null = null;
+  try {
+    const photos = await fetchStravaActivityPhotos(activity.id, accessToken);
+    photoUrl = firstPhotoUrl(photos);
+  } catch (err) {
+    console.error("strava webhook: activity photos fetch failed", activity.id, err);
+  }
+
   const { error: insertError } = await admin.from("activities").upsert(
     {
       user_id: user.id,
@@ -123,6 +136,9 @@ export async function POST(request: NextRequest) {
       total_elevation_gain: activity.total_elevation_gain,
       has_gps: true,
       activity_date: activity.start_date_local.slice(0, 10),
+      avg_heartrate: activity.average_heartrate ?? null,
+      route_polyline: activity.map?.summary_polyline ?? null,
+      photo_url: photoUrl,
     },
     { onConflict: "strava_activity_id", ignoreDuplicates: true }
   );

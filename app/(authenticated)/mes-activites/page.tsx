@@ -1,3 +1,4 @@
+import { RouteMap } from "@/components/route-map";
 import {
   computeDayScore,
   getWeekBounds,
@@ -15,6 +16,8 @@ interface ActivityRow extends ScoredActivity {
   id: string;
   name: string | null;
   moving_time_seconds: number | null;
+  route_polyline: string | null;
+  photo_url: string | null;
 }
 
 function formatDay(dateStr: string): string {
@@ -48,7 +51,9 @@ export default async function MesActivitesPage() {
 
   const { data: rows } = await supabase
     .from("activities")
-    .select("id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds")
+    .select(
+      "id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds, route_polyline, photo_url"
+    )
     .eq("user_id", user.id)
     .gte("activity_date", toDateString(rangeStart))
     .lte("activity_date", toDateString(currentWeekEnd))
@@ -61,6 +66,8 @@ export default async function MesActivitesPage() {
     distance_km: r.distance_km === null ? null : Number(r.distance_km),
     total_elevation_gain: r.total_elevation_gain === null ? null : Number(r.total_elevation_gain),
     moving_time_seconds: r.moving_time_seconds,
+    route_polyline: r.route_polyline,
+    photo_url: r.photo_url,
   }));
 
   // Groupe par semaine (lundi) puis par jour, semaine/jour les plus récents
@@ -132,10 +139,11 @@ export default async function MesActivitesPage() {
                           <ul className="flex flex-col divide-y divide-white/10">
                             {dayActivities.map((activity) => {
                               const excluded = !isActivityScorable(activity);
+                              const hasMedia = Boolean(activity.route_polyline || activity.photo_url);
                               return (
                                 <li
                                   key={activity.id}
-                                  className="flex flex-col gap-1 px-4 py-3 text-sm"
+                                  className="flex flex-col gap-2 px-4 py-3 text-sm"
                                 >
                                   <div className="flex items-center justify-between gap-3">
                                     <span className="font-medium text-white">
@@ -151,6 +159,23 @@ export default async function MesActivitesPage() {
                                       Exclue du score : distance sous le seuil anti-spam (
                                       {MIN_VALID_DISTANCE_KM} km)
                                     </span>
+                                  )}
+                                  {hasMedia && (
+                                    <div className="flex gap-2">
+                                      {activity.route_polyline && (
+                                        <div className="overflow-hidden rounded-md border border-white/10 bg-surface/60 p-1.5">
+                                          <RouteMap polyline={activity.route_polyline} width={110} height={70} />
+                                        </div>
+                                      )}
+                                      {activity.photo_url && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                          src={activity.photo_url}
+                                          alt=""
+                                          className="h-[70px] w-[110px] rounded-md border border-white/10 object-cover"
+                                        />
+                                      )}
+                                    </div>
                                   )}
                                 </li>
                               );

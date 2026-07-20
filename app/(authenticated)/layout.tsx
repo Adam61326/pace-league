@@ -18,7 +18,7 @@ export default async function AuthenticatedLayout({
 
   const { data: profile } = await supabase
     .from("users")
-    .select("strava_firstname, strava_lastname, strava_profile_photo_url")
+    .select("strava_firstname, strava_lastname, strava_profile_photo_url, country_code, strava_athlete_id")
     .eq("id", user.id)
     .single();
 
@@ -35,6 +35,9 @@ export default async function AuthenticatedLayout({
         lastname={profile?.strava_lastname ?? null}
         photoUrl={profile?.strava_profile_photo_url ?? null}
         name={displayName}
+        email={user.email!}
+        countryCode={profile?.country_code ?? null}
+        isStravaConnected={Boolean(profile?.strava_athlete_id)}
       />
       <div className="flex flex-1 flex-col">{children}</div>
     </div>

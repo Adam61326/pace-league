@@ -145,6 +145,41 @@ export interface StravaActivityDetail {
   start_date_local: string; // ISO 8601
   start_latlng: [number, number] | null;
   manual: boolean;
+  // Absent (pas juste 0) si l'activité n'a pas de donnée cardiaque.
+  average_heartrate?: number | null;
+  map?: { summary_polyline?: string | null } | null;
+}
+
+export interface StravaActivityPhoto {
+  urls?: Record<string, string> | null;
+}
+
+// GET /activities/{id}/photos : jamais d'échec bloquant côté appelant, une
+// activité peut simplement n'avoir aucune photo attachée.
+export async function fetchStravaActivityPhotos(
+  activityId: number | string,
+  accessToken: string
+): Promise<StravaActivityPhoto[]> {
+  const response = await fetch(
+    `${STRAVA_API_BASE}/activities/${activityId}/photos?photo_sources=true&size=600`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Strava activity photos fetch failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// La clé de `urls` est la largeur en pixels demandée ; Strava ne garantit pas
+// qu'elle corresponde exactement à `size` demandé plus haut, donc on prend
+// la première URL disponible plutôt que d'indexer une clé fixe.
+export function firstPhotoUrl(photos: StravaActivityPhoto[]): string | null {
+  const urls = photos[0]?.urls;
+  if (!urls) return null;
+  const values = Object.values(urls);
+  return values[0] ?? null;
 }
 
 export interface StravaAthleteSummary {

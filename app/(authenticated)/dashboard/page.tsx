@@ -1,15 +1,17 @@
-import { getCountryName } from "@/lib/countries";
+import { ContributionCalendar } from "@/components/contribution-calendar";
+import { RouteMap } from "@/components/route-map";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
 import { createClient } from "@/lib/supabase/server";
 import {
   IconCalendarCheck,
   IconClock,
+  IconHeartbeat,
   IconMountain,
   IconRoute,
+  IconTrophy,
 } from "@tabler/icons-react";
 import { redirect } from "next/navigation";
-import { StravaActions } from "./strava-actions";
 import { WeeklyTrend } from "./weekly-trend";
 
 const STRAVA_ERROR_MESSAGES: Record<string, string> = {
@@ -19,6 +21,7 @@ const STRAVA_ERROR_MESSAGES: Record<string, string> = {
 };
 
 const WEEKS_OF_TREND = 4;
+const CALENDAR_WEEKS = 12;
 
 function formatPace(secPerKm: number | null): string {
   if (secPerKm == null) return "—";
@@ -30,6 +33,26 @@ function formatPace(secPerKm: number | null): string {
 function pct(points: number, total: number): number {
   if (total <= 0) return 0;
   return Math.round((points / total) * 100);
+}
+
+function formatShortDate(dateStr: string): string {
+  return new Date(`${dateStr}T00:00:00Z`).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+// Liste de WEEKS_OF_TREND lundis consécutifs, se terminant sur `weekStart`
+// (semaine en cours incluse).
+function weekStartsBack(weekStart: Date, count: number): string[] {
+  const result: string[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(weekStart);
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    result.push(toDateString(d));
+  }
+  return result;
 }
 
 export default async function DashboardPage({
@@ -46,18 +69,10 @@ export default async function DashboardPage({
     redirect("/login?redirectTo=/dashboard");
   }
 
-  const { data: profile } = await supabase
-    .from("users")
-    .select("country_code, strava_athlete_id")
-    .eq("id", user.id)
-    .single();
-
   const params = await searchParams;
   const strava = typeof params.strava === "string" ? params.strava : undefined;
   const stravaError =
     typeof params.strava_error === "string" ? params.strava_error : undefined;
-
-  const isStravaConnected = Boolean(profile?.strava_athlete_id);
 
   const { weekStart, weekEnd } = getWeekBounds();
   const weekStartStr = toDateString(weekStart);
@@ -71,7 +86,7 @@ export default async function DashboardPage({
   // reste plus honnête en montrant tout ce qui a été fait).
   const { data: weekActivities } = await supabase
     .from("activities")
-    .select("activity_date, distance_km, total_elevation_gain, moving_time_seconds")
+    .select("activity_date, distance_km, total_elevation_gain, moving_time_seconds, avg_heartrate")
     .eq("user_id", user.id)
     .gte("activity_date", weekStartStr)
     .lte("activity_date", weekEndStr);
@@ -87,6 +102,16 @@ export default async function DashboardPage({
   );
   const activeDays = new Set((weekActivities ?? []).map((a) => a.activity_date)).size;
   const avgPaceSecPerKm = totalKm > 0 ? totalMovingTime / totalKm : null;
+
+  // Moyenne de fréquence cardiaque de la semaine : seulement si au moins une
+  // activité a la donnée (pas de capteur = absente, jamais traitée comme 0).
+  const heartrateReadings = (weekActivities ?? [])
+    .map((a) => (a.avg_heartrate != null ? Number(a.avg_heartrate) : null))
+    .filter((v): v is number => v != null);
+  const avgHeartrate =
+    heartrateReadings.length > 0
+      ? heartrateReadings.reduce((sum, v) => sum + v, 0) / heartrateReadings.length
+      : null;
 
   // Répartition du score de la semaine, depuis weekly_scores (calculé par le
   // cron quotidien — peut ne pas encore exister le jour même).
@@ -113,12 +138,7 @@ export default async function DashboardPage({
   ];
 
   // Tendance sur les WEEKS_OF_TREND dernières semaines (semaine en cours incluse).
-  const trendWeekStarts: string[] = [];
-  for (let i = WEEKS_OF_TREND - 1; i >= 0; i--) {
-    const d = new Date(weekStart);
-    d.setUTCDate(d.getUTCDate() - i * 7);
-    trendWeekStarts.push(toDateString(d));
-  }
+  const trendWeekStarts = weekStartsBack(weekStart, WEEKS_OF_TREND);
 
   const { data: trendRows } = await supabase
     .from("weekly_scores")
@@ -132,6 +152,73 @@ export default async function DashboardPage({
     weekStart: ws,
     totalPoints: trendByWeek.get(ws) ?? 0,
   }));
+
+  // Calendrier de régularité (façon "contributions") sur les CALENDAR_WEEKS
+  // dernières semaines, depuis les mêmes activités déjà en base — aucune
+  // nouvelle donnée à récupérer.
+  const calendarWeekStarts = weekStartsBack(weekStart, CALENDAR_WEEKS);
+  const { data: calendarActivities } = await supabase
+    .from("activities")
+    .select("activity_date, distance_km")
+    .eq("user_id", user.id)
+    .gte("activity_date", calendarWeekStarts[0])
+    .lte("activity_date", weekEndStr);
+
+  const kmByDate = new Map<string, number>();
+  for (const a of calendarActivities ?? []) {
+    kmByDate.set(a.activity_date, (kmByDate.get(a.activity_date) ?? 0) + Number(a.distance_km ?? 0));
+  }
+
+  // Records personnels : requêtes ciblées (tri + limite), pas de recharge de
+  // toutes les activités en mémoire.
+  const [{ data: longestRun }, { data: biggestClimb }, { data: bestPaceActivity }] = await Promise.all([
+    supabase
+      .from("activities")
+      .select("distance_km, activity_date")
+      .eq("user_id", user.id)
+      .order("distance_km", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("activities")
+      .select("total_elevation_gain, activity_date")
+      .eq("user_id", user.id)
+      .order("total_elevation_gain", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("activities")
+      .select("avg_speed_kmh, activity_date")
+      .eq("user_id", user.id)
+      .gte("distance_km", 3)
+      .order("avg_speed_kmh", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const hasAnyRecord = Boolean(longestRun || biggestClimb || bestPaceActivity);
+
+  // Dernière activité synchronisée, pour la mise en avant tracé/photo.
+  const { data: latestActivity } = await supabase
+    .from("activities")
+    .select("name, activity_date, route_polyline, photo_url")
+    .eq("user_id", user.id)
+    .order("activity_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const hasLatestMedia = Boolean(latestActivity?.route_polyline || latestActivity?.photo_url);
+
+  const weekStatTiles = [
+    { icon: IconRoute, label: "Distance", value: `${totalKm.toFixed(1)} km` },
+    { icon: IconMountain, label: "D+", value: `${Math.round(totalDplus)} m` },
+    { icon: IconCalendarCheck, label: "Jours actifs", value: String(activeDays) },
+    { icon: IconClock, label: "Allure moy.", value: formatPace(avgPaceSecPerKm) },
+    ...(avgHeartrate != null
+      ? [{ icon: IconHeartbeat, label: "FC moyenne", value: `${Math.round(avgHeartrate)} bpm` }]
+      : []),
+  ];
 
   return (
     <div className="flex flex-1 flex-col items-center gap-10 bg-background px-6 py-16">
@@ -172,16 +259,35 @@ export default async function DashboardPage({
           </section>
         )}
 
+        {/* Dernière activité (tracé + photo, quand disponibles) */}
+        {latestActivity && hasLatestMedia && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+              Dernière activité — {latestActivity.name?.trim() || "Sortie course à pied"}
+            </h2>
+            <div className="flex flex-wrap gap-4">
+              {latestActivity.route_polyline && (
+                <div className="overflow-hidden rounded-md border border-white/10 bg-surface/60 p-3">
+                  <RouteMap polyline={latestActivity.route_polyline} width={260} height={160} />
+                </div>
+              )}
+              {latestActivity.photo_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={latestActivity.photo_url}
+                  alt=""
+                  className="h-[186px] w-[260px] rounded-md border border-white/10 object-cover"
+                />
+              )}
+            </div>
+          </section>
+        )}
+
         {/* Résumé de la semaine */}
         <section className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Cette semaine</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { icon: IconRoute, label: "Distance", value: `${totalKm.toFixed(1)} km` },
-              { icon: IconMountain, label: "D+", value: `${Math.round(totalDplus)} m` },
-              { icon: IconCalendarCheck, label: "Jours actifs", value: String(activeDays) },
-              { icon: IconClock, label: "Allure moy.", value: formatPace(avgPaceSecPerKm) },
-            ].map(({ icon: Icon, label, value }) => (
+            {weekStatTiles.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
                 className="flex flex-col gap-2 rounded-md border border-white/10 p-4"
@@ -191,6 +297,16 @@ export default async function DashboardPage({
                 <span className="text-xs text-zinc-400">{label}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Calendrier de régularité */}
+        <section className="flex flex-col gap-4">
+          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+            Régularité ({CALENDAR_WEEKS} dernières semaines)
+          </h2>
+          <div className="overflow-x-auto">
+            <ContributionCalendar kmByDate={kmByDate} weekStartDates={calendarWeekStarts} />
           </div>
         </section>
 
@@ -228,36 +344,58 @@ export default async function DashboardPage({
           )}
         </section>
 
+        {/* Records personnels */}
+        <section className="flex flex-col gap-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+            <IconTrophy size={16} stroke={1.75} />
+            Records personnels
+          </h2>
+          {!hasAnyRecord ? (
+            <p className="text-sm text-zinc-400">Pas encore d&apos;activité enregistrée.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
+                <IconRoute size={18} stroke={1.75} className="text-zinc-400" />
+                <span className="text-lg font-semibold tracking-tight text-white">
+                  {longestRun ? `${Number(longestRun.distance_km).toFixed(2)} km` : "—"}
+                </span>
+                <span className="text-xs text-zinc-400">
+                  Plus longue sortie
+                  {longestRun && ` · ${formatShortDate(longestRun.activity_date)}`}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
+                <IconMountain size={18} stroke={1.75} className="text-zinc-400" />
+                <span className="text-lg font-semibold tracking-tight text-white">
+                  {biggestClimb ? `${Math.round(Number(biggestClimb.total_elevation_gain))} m` : "—"}
+                </span>
+                <span className="text-xs text-zinc-400">
+                  Plus gros D+
+                  {biggestClimb && ` · ${formatShortDate(biggestClimb.activity_date)}`}
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
+                <IconClock size={18} stroke={1.75} className="text-zinc-400" />
+                <span className="text-lg font-semibold tracking-tight text-white">
+                  {bestPaceActivity
+                    ? formatPace(3600 / Number(bestPaceActivity.avg_speed_kmh))
+                    : "—"}
+                </span>
+                <span className="text-xs text-zinc-400">
+                  Meilleure allure (≥3km)
+                  {bestPaceActivity && ` · ${formatShortDate(bestPaceActivity.activity_date)}`}
+                </span>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Tendance 4 semaines */}
         <section className="flex flex-col gap-4">
           <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
             Tendance ({WEEKS_OF_TREND} dernières semaines)
           </h2>
           <WeeklyTrend trend={trend} />
-        </section>
-
-        {/* Mon profil (discret) */}
-        <section className="flex flex-col gap-3 border-t border-white/10 pt-8">
-          <h2 className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
-            Mon profil
-          </h2>
-          <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4 text-sm">
-            <p>
-              <span className="text-zinc-400">E-mail : </span>
-              <span className="text-white">{user.email}</span>
-            </p>
-            <p>
-              <span className="text-zinc-400">Pays : </span>
-              <span className="text-white">
-                {profile?.country_code ? getCountryName(profile.country_code) : "—"}
-              </span>
-            </p>
-            <p>
-              <span className="text-zinc-400">Strava : </span>
-              <span className="text-white">{isStravaConnected ? "connecté" : "non connecté"}</span>
-            </p>
-          </div>
-          <StravaActions isConnected={isStravaConnected} />
         </section>
       </div>
     </div>

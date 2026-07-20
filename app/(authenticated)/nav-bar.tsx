@@ -2,10 +2,12 @@
 
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
+import { getCountryName } from "@/lib/countries";
 import { IconChevronDown } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { StravaActions } from "./strava-actions";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Tableau de bord" },
@@ -21,12 +23,18 @@ export function NavBar({
   lastname,
   photoUrl,
   name,
+  email,
+  countryCode,
+  isStravaConnected,
 }: {
   userId: string;
   firstname: string | null;
   lastname: string | null;
   photoUrl: string | null;
   name: string;
+  email: string;
+  countryCode: string | null;
+  isStravaConnected: boolean;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -78,10 +86,28 @@ export function NavBar({
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-48 rounded-md border border-white/10 bg-surface py-1 shadow-xl">
-              <p className="truncate border-b border-white/10 px-3 py-2 text-sm font-medium text-white">
-                {name}
-              </p>
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-md border border-white/10 bg-surface py-1 shadow-xl">
+              <div className="border-b border-white/10 px-3 py-2">
+                <p className="truncate text-sm font-medium text-white">{name}</p>
+                <p className="truncate text-xs text-zinc-400">{email}</p>
+              </div>
+
+              <div className="flex flex-col gap-2 border-b border-white/10 px-3 py-3 text-xs">
+                <p className="flex items-center justify-between">
+                  <span className="text-zinc-400">Pays</span>
+                  <span className="text-white">
+                    {countryCode ? getCountryName(countryCode) : "—"}
+                  </span>
+                </p>
+                <p className="flex items-center justify-between">
+                  <span className="text-zinc-400">Strava</span>
+                  <span className="text-white">
+                    {isStravaConnected ? "connecté" : "non connecté"}
+                  </span>
+                </p>
+                <StravaActions isConnected={isStravaConnected} />
+              </div>
+
               <form action="/auth/signout" method="post">
                 <button
                   type="submit"
