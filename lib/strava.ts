@@ -7,6 +7,51 @@ const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 export const STRAVA_SCOPE = "activity:read";
 export const STRAVA_OAUTH_STATE_COOKIE = "strava_oauth_state";
 
+// Quota gratuit Strava (CLAUDE.md) : 100 req/15min, 1000/jour. Strava renvoie
+// l'usage courant sur chaque réponse via ces deux en-têtes ("court terme,
+// jour" séparés par une virgule) : on s'en sert pour logger et, si besoin,
+// interrompre un traitement par lot (backfill d'historique) avant de
+// dépasser le quota — le webhook (1 activité à la fois) n'en a jamais besoin.
+export interface StravaRateLimitInfo {
+  usage15min: number;
+  limit15min: number;
+  usageDaily: number;
+  limitDaily: number;
+}
+
+const RATE_LIMIT_WARNING_RATIO = 0.85;
+const RATE_LIMIT_CRITICAL_RATIO = 0.95;
+
+export class StravaRateLimitExceededError extends Error {}
+
+function parseStravaRateLimitHeaders(response: Response): StravaRateLimitInfo | null {
+  const limitHeader = response.headers.get("x-ratelimit-limit");
+  const usageHeader = response.headers.get("x-ratelimit-usage");
+  if (!limitHeader || !usageHeader) return null;
+
+  const [limit15min, limitDaily] = limitHeader.split(",").map(Number);
+  const [usage15min, usageDaily] = usageHeader.split(",").map(Number);
+  return { usage15min, limit15min, usageDaily, limitDaily };
+}
+
+function checkStravaRateLimit(scope: string, response: Response): void {
+  const info = parseStravaRateLimitHeaders(response);
+  if (!info) return;
+
+  const ratio15min = info.usage15min / info.limit15min;
+  const ratioDaily = info.usageDaily / info.limitDaily;
+
+  if (ratio15min >= RATE_LIMIT_CRITICAL_RATIO || ratioDaily >= RATE_LIMIT_CRITICAL_RATIO) {
+    throw new StravaRateLimitExceededError(
+      `strava rate limit critical (${scope}): ${JSON.stringify(info)}`
+    );
+  }
+
+  if (ratio15min >= RATE_LIMIT_WARNING_RATIO || ratioDaily >= RATE_LIMIT_WARNING_RATIO) {
+    console.warn(`strava: rate limit approaching (${scope})`, info);
+  }
+}
+
 export function getStravaAuthorizeUrl(redirectUri: string, state: string): string {
   const url = new URL(`${STRAVA_OAUTH_BASE}/authorize`);
   url.searchParams.set("client_id", process.env.STRAVA_CLIENT_ID!);
@@ -170,6 +215,8 @@ export async function fetchStravaActivityPhotos(
     { headers: { Authorization: `Bearer ${accessToken}` } }
   );
 
+  checkStravaRateLimit("activity photos", response);
+
   if (!response.ok) {
     throw new Error(`Strava activity photos fetch failed: ${response.status}`);
   }
@@ -202,6 +249,8 @@ export async function fetchStravaAthlete(accessToken: string): Promise<StravaAth
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
+  checkStravaRateLimit("athlete", response);
+
   if (!response.ok) {
     throw new Error(`Strava athlete fetch failed: ${response.status}`);
   }
@@ -217,8 +266,37 @@ export async function fetchStravaActivity(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
+  checkStravaRateLimit("activity detail", response);
+
   if (!response.ok) {
     throw new Error(`Strava activity fetch failed: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export interface StravaActivitySummary {
+  id: number;
+}
+
+// GET /athlete/activities?after=... : utilisé uniquement pour le rattrapage
+// d'historique à la connexion Strava (app/api/strava/callback), pas par le
+// webhook. Un seul appel (per_page=50) couvre largement une fenêtre de 4
+// semaines de course à pied grand public — pas besoin de pagination ici.
+export async function fetchStravaActivitiesSince(
+  accessToken: string,
+  afterEpochSeconds: number,
+  perPage = 50
+): Promise<StravaActivitySummary[]> {
+  const response = await fetch(
+    `${STRAVA_API_BASE}/athlete/activities?after=${afterEpochSeconds}&per_page=${perPage}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+
+  checkStravaRateLimit("activities list", response);
+
+  if (!response.ok) {
+    throw new Error(`Strava activities list fetch failed: ${response.status}`);
   }
 
   return response.json();

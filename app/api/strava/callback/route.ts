@@ -1,4 +1,6 @@
 import { encryptToken } from "@/lib/crypto";
+import { backfillRecentStravaActivities } from "@/lib/strava-backfill";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   exchangeStravaCode,
@@ -6,7 +8,7 @@ import {
   STRAVA_OAUTH_STATE_COOKIE,
 } from "@/lib/strava";
 import { cookies } from "next/headers";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, after } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -59,6 +61,19 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     dashboardUrl.searchParams.set("strava", "connected");
+
+    // Récupération de l'historique récent (CLAUDE.md Sprint 13) : best-effort
+    // et asynchrone, ne doit jamais retarder ni bloquer l'arrivée sur le
+    // dashboard. `after()` garde la fonction serverless active le temps
+    // nécessaire, une fois la redirection déjà renvoyée au navigateur.
+    after(async () => {
+      const admin = createAdminClient();
+      try {
+        await backfillRecentStravaActivities(admin, user.id, tokenResponse.access_token);
+      } catch (err) {
+        console.error("strava callback: background backfill failed", user.id, err);
+      }
+    });
   } catch (err) {
     console.error("strava callback: token exchange or user update failed", user.id, err);
     dashboardUrl.searchParams.set("strava_error", "exchange_failed");
