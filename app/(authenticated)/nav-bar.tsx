@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/", label: "Classement" },
   { href: "/dashboard", label: "Tableau de bord" },
   { href: "/ligues", label: "Ligues" },
+  { href: "/hall-of-fame", label: "Hall of Fame" },
 ];
 
 // "/dashboard" reste actif sur sa sous-page "/mes-activites", "/ligues" sur

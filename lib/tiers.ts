@@ -42,8 +42,10 @@ const RELEGATION_ZONE = 5;
 // En dessous de ce seuil, les zones de promotion et de relégation se
 // chevaucheraient (ex: cohorte de 6 joueurs -> le rang 5 serait à la fois
 // dans le top 5 et dans le bottom 5). Pas de mouvement tant qu'une cohorte
-// n'atteint pas cette taille.
-const MIN_COHORT_SIZE_FOR_MOVEMENT = 10;
+// n'atteint pas cette taille. Exportée : lib/badges.ts applique le même
+// seuil aux badges "victoire hebdo"/"podiums" (Sprint 14), pour la même
+// raison — gagner dans une cohorte de 2 joueurs n'est pas une vraie victoire.
+export const MIN_COHORT_SIZE_FOR_MOVEMENT = 10;
 
 export function nextTierUp(tier: Tier): Tier | null {
   const idx = TIER_ORDER.indexOf(tier);
@@ -198,7 +200,7 @@ export async function computeTierCohortsForWeek(
     for (const cohortPlayers of cohorts) {
       const { data: cohortRow, error: cohortInsertError } = await admin
         .from("tier_cohorts")
-        .insert({ tier, week_start_date: weekStartStr })
+        .insert({ tier, week_start_date: weekStartStr, member_count: cohortPlayers.length })
         .select("id")
         .single();
 
@@ -264,4 +266,90 @@ export async function computeTierCohortsForWeek(
     cohortsCreated,
     movementsApplied: weekEnded,
   };
+}
+
+export interface CohortMemberProfile {
+  strava_firstname: string | null;
+  strava_lastname: string | null;
+  strava_profile_photo_url: string | null;
+  country_code: string;
+}
+
+export interface CohortMemberInfo {
+  user_id: string;
+  week_points: number;
+  rank: number;
+  movement: "promoted" | "relegated" | "stable";
+  user: CohortMemberProfile;
+}
+
+function extractCohortUser(users: unknown): CohortMemberProfile | null {
+  if (!users) return null;
+  if (Array.isArray(users)) {
+    return (users[0] as CohortMemberProfile | undefined) ?? null;
+  }
+  return users as CohortMemberProfile;
+}
+
+export async function findMyCohortId(
+  admin: SupabaseClient,
+  userId: string,
+  weekStartStr: string
+): Promise<string | null> {
+  const { data, error } = await admin
+    .from("cohort_members")
+    .select("cohort_id, tier_cohorts!inner(week_start_date)")
+    .eq("user_id", userId)
+    .eq("tier_cohorts.week_start_date", weekStartStr)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.cohort_id ?? null;
+}
+
+// Retrouve la cohorte de l'utilisateur pour cette semaine ; si aucune
+// cohorte n'existe encore (première visite avant le premier passage du cron
+// sur cette semaine), la calcule à la demande plutôt que de renvoyer vide en
+// attendant la nuit prochaine. Partagée par /ligues et le widget "Rivaux" du
+// dashboard (Sprint 14) — auparavant dupliquée dans app/(authenticated)/ligues/page.tsx.
+export async function findOrCreateMyCohortId(
+  admin: SupabaseClient,
+  userId: string,
+  weekStartStr: string,
+  weekStart: Date,
+  weekEnd: Date
+): Promise<string | null> {
+  const existing = await findMyCohortId(admin, userId, weekStartStr);
+  if (existing) return existing;
+
+  await computeTierCohortsForWeek(admin, weekStart, weekEnd);
+
+  // Un très léger délai de cohérence lecture-après-écriture a été observé
+  // ponctuellement juste après l'insertion (PostgREST/pooler Supabase) :
+  // une seconde tentative après une courte pause absorbe ce cas plutôt que
+  // d'afficher une cohorte vide alors qu'elle vient d'être créée.
+  const firstAttempt = await findMyCohortId(admin, userId, weekStartStr);
+  if (firstAttempt) return firstAttempt;
+
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  return findMyCohortId(admin, userId, weekStartStr);
+}
+
+export async function getCohortMembers(
+  admin: SupabaseClient,
+  cohortId: string
+): Promise<CohortMemberInfo[]> {
+  const { data, error } = await admin
+    .from("cohort_members")
+    .select(
+      "user_id, week_points, rank, movement, users!inner(strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
+    )
+    .eq("cohort_id", cohortId)
+    .order("rank", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row) => ({ ...row, user: extractCohortUser(row.users) }))
+    .filter((row): row is typeof row & { user: CohortMemberProfile } => row.user !== null);
 }

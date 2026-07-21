@@ -1,13 +1,19 @@
+import { Avatar } from "@/components/avatar";
 import { ContributionCalendar } from "@/components/contribution-calendar";
 import { PerformanceRadar } from "@/components/performance-radar";
 import { RouteMap } from "@/components/route-map";
 import { SubTabs } from "@/components/sub-tabs";
+import { WeeklyShareCard } from "@/components/weekly-share-card";
+import { formatDisplayName } from "@/lib/display-name";
 import { computePerformanceAxes } from "@/lib/performance";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { findOrCreateMyCohortId, getCohortMembers, getOrCreatePlayerTier } from "@/lib/tiers";
 import {
   IconActivity,
+  IconAward,
   IconCalendarCheck,
   IconClock,
   IconHeartbeat,
@@ -15,8 +21,11 @@ import {
   IconRoute,
   IconTrophy,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { WeeklyTrend } from "./weekly-trend";
+
+const RIVAL_SPAN = 2;
 
 const STRAVA_ERROR_MESSAGES: Record<string, string> = {
   access_denied: "Vous avez refusé l'accès à votre compte Strava.",
@@ -101,6 +110,56 @@ export default async function DashboardPage({
   const weekEndStr = toDateString(weekEnd);
 
   const streakDays = await getStreak(supabase, user.id);
+
+  // Rivaux (CLAUDE.md Sprint 14) : les 2 joueurs juste au-dessus et 2 juste
+  // en dessous dans la cohorte actuelle, par points de la semaine. Nécessite
+  // le client admin (comme /ligues) : computeTierCohortsForWeek doit pouvoir
+  // écrire tier_cohorts/cohort_members/player_tiers, hors de portée de RLS.
+  const admin = createAdminClient();
+  await getOrCreatePlayerTier(admin, user.id);
+  const cohortId = await findOrCreateMyCohortId(admin, user.id, weekStartStr, weekStart, weekEnd);
+  const cohortMembers = cohortId ? await getCohortMembers(admin, cohortId) : [];
+  const myCohortIndex = cohortMembers.findIndex((m) => m.user_id === user.id);
+
+  const rivalsAbove =
+    myCohortIndex > 0 ? cohortMembers.slice(Math.max(0, myCohortIndex - RIVAL_SPAN), myCohortIndex) : [];
+  const rivalsBelow =
+    myCohortIndex >= 0
+      ? cohortMembers.slice(myCohortIndex + 1, myCohortIndex + 1 + RIVAL_SPAN)
+      : [];
+  const myWeekPoints = myCohortIndex >= 0 ? cohortMembers[myCohortIndex].week_points : 0;
+
+  // Badges récents (teaser, page complète sur /badges).
+  const { data: shareProfile } = await supabase
+    .from("users")
+    .select("share_token")
+    .eq("id", user.id)
+    .single();
+
+  const [{ data: recentBadgeRows }, { count: totalBadgesEarned }, { count: totalBadgesCount }] =
+    await Promise.all([
+      supabase
+        .from("user_badges")
+        .select("badge_key, earned_at, badges(label)")
+        .eq("user_id", user.id)
+        .order("earned_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("user_badges")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id),
+      supabase.from("badges").select("*", { count: "exact", head: true }),
+    ]);
+
+  interface RecentBadgeRow {
+    badge_key: string;
+    earned_at: string;
+    badges: { label: string } | { label: string }[] | null;
+  }
+  const recentBadges = ((recentBadgeRows ?? []) as RecentBadgeRow[]).map((row) => ({
+    key: row.badge_key,
+    label: Array.isArray(row.badges) ? (row.badges[0]?.label ?? row.badge_key) : (row.badges?.label ?? row.badge_key),
+  }));
 
   const { data: hrProfile } = await supabase
     .from("users")
@@ -278,12 +337,15 @@ export default async function DashboardPage({
     <div className="flex flex-1 flex-col items-center gap-10 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-10">
         <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
-            <p className="text-sm text-zinc-400">
-              Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
-              {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
+              <p className="text-sm text-zinc-400">
+                Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
+                {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
+              </p>
+            </div>
+            {shareProfile?.share_token && <WeeklyShareCard shareToken={shareProfile.share_token} />}
           </div>
           <SubTabs tabs={DASHBOARD_TABS} activeHref="/dashboard" />
         </div>
@@ -356,6 +418,69 @@ export default async function DashboardPage({
             ))}
           </div>
         </section>
+
+        {/* Rivaux (CLAUDE.md Sprint 14) : masqué si la cohorte est trop
+            petite pour avoir le moindre rival (ex: cohorte solo). */}
+        {(rivalsAbove.length > 0 || rivalsBelow.length > 0) && (
+          <section className="flex flex-col gap-4">
+            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Rivaux</h2>
+            <div className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
+              {rivalsAbove.map((rival) => (
+                <div key={rival.user_id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <Avatar
+                    userId={rival.user_id}
+                    photoUrl={rival.user.strava_profile_photo_url}
+                    firstname={rival.user.strava_firstname}
+                    lastname={rival.user.strava_lastname}
+                    size={28}
+                  />
+                  <span className="flex-1 font-medium text-white">
+                    {formatDisplayName(rival.user.strava_firstname, rival.user.strava_lastname)}
+                  </span>
+                  <span className="text-xs text-green-400">
+                    +{(rival.week_points - myWeekPoints).toFixed(1)} pts à combler
+                  </span>
+                  <span className="w-16 text-right font-semibold text-white">
+                    {rival.week_points} pts
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center gap-3 bg-white/[.06] px-4 py-3 text-sm">
+                <Avatar
+                  userId={user.id}
+                  photoUrl={null}
+                  firstname={null}
+                  lastname={null}
+                  size={28}
+                />
+                <span className="flex-1 font-medium text-white">Toi</span>
+                <span className="w-16 text-right font-semibold text-white">
+                  {myWeekPoints} pts
+                </span>
+              </div>
+              {rivalsBelow.map((rival) => (
+                <div key={rival.user_id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                  <Avatar
+                    userId={rival.user_id}
+                    photoUrl={rival.user.strava_profile_photo_url}
+                    firstname={rival.user.strava_firstname}
+                    lastname={rival.user.strava_lastname}
+                    size={28}
+                  />
+                  <span className="flex-1 font-medium text-white">
+                    {formatDisplayName(rival.user.strava_firstname, rival.user.strava_lastname)}
+                  </span>
+                  <span className="text-xs text-zinc-400">
+                    {(myWeekPoints - rival.week_points).toFixed(1)} pts d&apos;avance
+                  </span>
+                  <span className="w-16 text-right font-semibold text-white">
+                    {rival.week_points} pts
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Calendrier de régularité */}
         <section className="flex flex-col gap-4">
@@ -474,6 +599,33 @@ export default async function DashboardPage({
             </div>
           </section>
         )}
+
+        {/* Badges (teaser, page complète sur /badges) */}
+        <section className="flex flex-col gap-4">
+          <div className="flex items-baseline justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+              <IconAward size={16} stroke={1.75} />
+              Badges
+            </h2>
+            <Link href="/badges" className="text-xs font-medium text-accent hover:underline">
+              Voir tout ({totalBadgesEarned ?? 0} / {totalBadgesCount ?? 0})
+            </Link>
+          </div>
+          {recentBadges.length === 0 ? (
+            <p className="text-sm text-zinc-400">Pas encore de badge débloqué.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {recentBadges.map((badge) => (
+                <span
+                  key={badge.key}
+                  className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-white"
+                >
+                  {badge.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* Performance à 4 axes */}
         <section className="flex flex-col gap-4">

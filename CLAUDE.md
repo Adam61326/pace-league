@@ -109,6 +109,34 @@ Un nouvel utilisateur démarre à `bronze_3` (créé automatiquement par le trig
 | rank | int | rang dans la cohorte |
 | movement | text | promoted / relegated / stable |
 
+Depuis Sprint 14, `tier_cohorts` a une colonne `member_count` (dénormalisée à la création de la cohorte) : évite de recompter les membres à chaque vérification de badge "victoire hebdo"/"podiums".
+
+### badges / user_badges (Sprint 14)
+| Table | Champs clés | Notes |
+|---|---|---|
+| badges | key (PK), category, label, description, threshold_value, threshold_unit | Catalogue fixe, seedé par migration. Catégories : distance, dplus, regularity, performance. |
+| user_badges | user_id (FK), badge_key (FK badges), earned_at, unique(user_id, badge_key) | Idempotent (upsert ignorant les doublons) — vérifié à chaque recalcul du cron (lib/badges.ts). |
+
+Seuils : Distance cumulée (5, 10, 21.1, 42.2, 100, 500, 1000, 5000, 10000 km), D+ cumulé (1000, 5000, 10000, 50000, 100000 m), Régularité (streak de 7, 30, 100, 365 jours, réutilise `lib/streak.ts`), Performance (top 1000 monde / top 100 France / top 10 France sur le classement individuel d'une semaine donnée, victoire hebdo = 1er de cohorte, 10 et 50 podiums cumulés = top 3 de cohorte).
+
+**Décision non spécifiée à l'origine, tranchée à l'implémentation** : "victoire hebdo" et "podiums cumulés" ne sont comptés que pour une cohorte d'au moins 10 joueurs actifs cette semaine-là (même seuil `MIN_COHORT_SIZE_FOR_MOVEMENT` que la promotion/relégation, "Logique de progression individuelle par paliers" ci-dessus) — gagner dans une cohorte de 1 ou 2 joueurs n'est pas une vraie victoire. Les badges "top France/monde" ne sont eux pas soumis à ce seuil : ils comparent au classement individuel complet, pas à la cohorte.
+
+**Tension avec le positionnement inclusif** (Vision produit ci-dessus) : les badges "top France/monde" et le Hall of Fame (voir ci-dessous) valorisent le classement brut (vitesse/volume), contrairement au principe "le scoring ne doit jamais favoriser les plus rapides/gros volumes". Ce sont des trophées cosmétiques greffés sur des données déjà calculées, pas une évolution du scoring lui-même (qui reste inchangé), mais le signal mérite d'être gardé en tête si le positionnement inclusif doit rester strictement cohérent sur toutes les surfaces du produit.
+
+### hall_of_fame (Sprint 14)
+| Champ | Type | Notes |
+|---|---|---|
+| id | uuid (PK) | |
+| week_start_date | date | |
+| rank | int (1-3) | |
+| user_id | uuid (FK users) | |
+| total_points | numeric | |
+
+Top 3 mondial (tous paliers confondus) par `total_points` de `weekly_scores`, archivé une fois la semaine terminée. Page publique `/hall-of-fame` (comme le classement mondial, pas de connexion requise). Figé définitivement une fois écrit — même logique que `tier_cohorts.movements_applied` : jamais recalculé rétroactivement, même si des données arrivent en retard.
+
+### users.share_token (Sprint 14)
+Colonne `uuid unique` ajoutée à `users`, générée automatiquement (`gen_random_uuid()`). Identifiant opaque pour `/api/weekly-card/[token]` (carte hebdomadaire partageable, générée via `next/og` `ImageResponse`) — distinct du `user_id` brut pour qu'on ne puisse pas deviner/scraper les cartes d'autres utilisateurs.
+
 ## Logique de scoring (par activité individuelle)
 
 Filtres anti-triche (appliqués avant tout calcul) :
@@ -176,6 +204,7 @@ En parallèle de ces trois niveaux de classement, **la progression individuelle 
 4. Sprint 4 : Interface publique de classement (par division, par pays), page profil utilisateur avec historique de points
 5. Sprint 5 : Ligues privées — table `leagues` (id, name, code, created_by, created_at), table `league_members` (league_id, user_id, joined_at), page de création/jointure par code, page de classement filtré par ligue
 6. Sprint 13 : remplacement des ligues par pays (divisions A/B/C) par une progression individuelle par paliers (Bronze → Legend, cohortes hebdomadaires de ~30 joueurs), saisons passées à 12 semaines, récupération automatique de l'historique Strava des 4 dernières semaines à la connexion
+7. Sprint 14 : badges (distance/D+/régularité/performance), rivaux dans la cohorte (dashboard), Hall of Fame public (top 3 mondial hebdomadaire archivé), cartes hebdomadaires partageables (`next/og`, token opaque)
 
 ## Décisions déjà prises (ne pas remettre en question sans discussion explicite)
 

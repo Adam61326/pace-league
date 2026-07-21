@@ -1,10 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// "/" (classement mondial) et "/classement" (redirect) restent publics —
-// voir Sprint 11 : la page d'accueil EST le classement, accessible sans
-// connexion.
-const PROTECTED_PATHS = ["/dashboard", "/ligues", "/ligues-privees", "/mes-activites", "/parametres"];
+// "/" (classement mondial), "/classement" (redirect) et "/hall-of-fame"
+// restent publics — voir Sprint 11 (accueil = classement) et Sprint 14
+// (Hall of Fame public, comme le classement mondial).
+const PROTECTED_PATHS = [
+  "/dashboard",
+  "/ligues",
+  "/ligues-privees",
+  "/mes-activites",
+  "/parametres",
+  "/badges",
+];
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });

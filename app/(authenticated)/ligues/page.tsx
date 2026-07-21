@@ -3,7 +3,13 @@ import { SubTabs } from "@/components/sub-tabs";
 import { getCountryFlag } from "@/lib/countries";
 import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
-import { computeTierCohortsForWeek, getOrCreatePlayerTier, TIER_META, type Tier } from "@/lib/tiers";
+import {
+  findOrCreateMyCohortId,
+  getCohortMembers,
+  getOrCreatePlayerTier,
+  TIER_META,
+  type Tier,
+} from "@/lib/tiers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { IconCrown, IconCrownFilled, IconDiamondFilled, IconMedal } from "@tabler/icons-react";
@@ -19,65 +25,6 @@ function TierIcon({ tier, className }: { tier: Tier; className?: string }) {
   if (tier === "master") return <IconCrown className={className} />;
   if (tier === "diamond") return <IconDiamondFilled className={className} />;
   return <IconMedal className={className} />;
-}
-
-interface CohortMemberUser {
-  strava_firstname: string | null;
-  strava_lastname: string | null;
-  strava_profile_photo_url: string | null;
-  country_code: string;
-}
-
-interface CohortMemberRow {
-  user_id: string;
-  week_points: number;
-  rank: number;
-  movement: "promoted" | "relegated" | "stable";
-  users: CohortMemberUser | CohortMemberUser[] | null;
-}
-
-function extractUser(users: CohortMemberRow["users"]): CohortMemberUser | null {
-  if (!users) return null;
-  return Array.isArray(users) ? (users[0] ?? null) : users;
-}
-
-// Retrouve la cohorte de l'utilisateur pour cette semaine ; si aucune
-// cohorte n'existe encore (première visite avant le premier passage du cron
-// sur cette semaine), la calcule à la demande plutôt que d'afficher une page
-// vide en attendant la nuit prochaine.
-async function findOrCreateMyCohort(
-  admin: ReturnType<typeof createAdminClient>,
-  userId: string,
-  weekStartStr: string,
-  weekStart: Date,
-  weekEnd: Date
-): Promise<string | null> {
-  const findCohortId = async () => {
-    const { data, error } = await admin
-      .from("cohort_members")
-      .select("cohort_id, tier_cohorts!inner(week_start_date)")
-      .eq("user_id", userId)
-      .eq("tier_cohorts.week_start_date", weekStartStr)
-      .maybeSingle();
-
-    if (error) throw error;
-    return data?.cohort_id ?? null;
-  };
-
-  const existing = await findCohortId();
-  if (existing) return existing;
-
-  await computeTierCohortsForWeek(admin, weekStart, weekEnd);
-
-  // Un très léger délai de cohérence lecture-après-écriture a été observé
-  // ponctuellement juste après l'insertion (PostgREST/pooler Supabase) :
-  // une seconde tentative après une courte pause absorbe ce cas plutôt que
-  // d'afficher une cohorte vide alors qu'elle vient d'être créée.
-  const firstAttempt = await findCohortId();
-  if (firstAttempt) return firstAttempt;
-
-  await new Promise((resolve) => setTimeout(resolve, 300));
-  return findCohortId();
 }
 
 export default async function LiguesPage() {
@@ -96,23 +43,8 @@ export default async function LiguesPage() {
   const { weekStart, weekEnd } = getWeekBounds();
   const weekStartStr = toDateString(weekStart);
 
-  const cohortId = await findOrCreateMyCohort(admin, user.id, weekStartStr, weekStart, weekEnd);
-
-  let members: (CohortMemberRow & { user: CohortMemberUser })[] = [];
-  if (cohortId) {
-    const { data: rows } = await admin
-      .from("cohort_members")
-      .select(
-        "user_id, week_points, rank, movement, users!inner(strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
-      )
-      .eq("cohort_id", cohortId)
-      .order("rank", { ascending: true })
-      .returns<CohortMemberRow[]>();
-
-    members = (rows ?? [])
-      .map((row) => ({ ...row, user: extractUser(row.users) }))
-      .filter((row): row is typeof row & { user: CohortMemberUser } => row.user !== null);
-  }
+  const cohortId = await findOrCreateMyCohortId(admin, user.id, weekStartStr, weekStart, weekEnd);
+  const members = cohortId ? await getCohortMembers(admin, cohortId) : [];
 
   const meta = TIER_META[tier];
   const hasMovementZones = members.some((m) => m.movement !== "stable");
