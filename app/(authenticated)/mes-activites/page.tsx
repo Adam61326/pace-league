@@ -60,7 +60,7 @@ export default async function MesActivitesPage() {
   const { data: rows } = await supabase
     .from("activities")
     .select(
-      "id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds, route_polyline, photo_url, weather_temp_celsius, weather_wind_kmh"
+      "id, activity_date, name, distance_km, total_elevation_gain, moving_time_seconds, route_polyline, photo_url, weather_temp_celsius, weather_wind_kmh, sport_type"
     )
     .eq("user_id", user.id)
     .gte("activity_date", toDateString(rangeStart))
@@ -78,6 +78,7 @@ export default async function MesActivitesPage() {
     photo_url: r.photo_url,
     weather_temp_celsius: r.weather_temp_celsius === null ? null : Number(r.weather_temp_celsius),
     weather_wind_kmh: r.weather_wind_kmh === null ? null : Number(r.weather_wind_kmh),
+    sport_type: r.sport_type,
   }));
 
   const hasAnyWeather = activities.some((a) => a.weather_temp_celsius != null);
@@ -107,9 +108,10 @@ export default async function MesActivitesPage() {
             </p>
             <p className="mt-2 text-xs text-zinc-500">
               Seules les activités qui passent les filtres GPS et vitesse sont synchronisées
-              depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Seul le
-              filtre anti-spam sur la distance (moins de {MIN_VALID_DISTANCE_KM} km) s&apos;applique
-              sur les activités listées ci-dessous.
+              depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Deux
+              autres filtres s&apos;appliquent sur les activités listées ci-dessous sans les
+              masquer : le seuil anti-spam sur la distance (moins de {MIN_VALID_DISTANCE_KM} km)
+              et le type d&apos;activité (seules les courses à pied comptent pour le score).
             </p>
           </div>
           <SubTabs tabs={DASHBOARD_TABS} activeHref="/mes-activites" />
@@ -171,8 +173,9 @@ export default async function MesActivitesPage() {
                                   </div>
                                   {excluded && (
                                     <span className="text-xs text-amber-400">
-                                      Exclue du score : distance sous le seuil anti-spam (
-                                      {MIN_VALID_DISTANCE_KM} km)
+                                      {(activity.distance_km ?? 0) < MIN_VALID_DISTANCE_KM
+                                        ? `Exclue du score : distance sous le seuil anti-spam (${MIN_VALID_DISTANCE_KM} km)`
+                                        : `Exclue du score : type d'activité non comptabilisé${activity.sport_type ? ` (${activity.sport_type})` : ""}`}
                                     </span>
                                   )}
                                   {activity.weather_temp_celsius != null && (

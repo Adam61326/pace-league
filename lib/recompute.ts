@@ -2,7 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkCumulativeBadges, checkWeeklyPerformanceBadges } from "@/lib/badges";
 import { archiveHallOfFameForWeek } from "@/lib/hall-of-fame";
 import { computeCountryScores, computeWeeklyScores, getWeekBounds, toDateString } from "@/lib/scoring";
+import { checkSeasonCompletion } from "@/lib/seasons";
 import { computeTierCohortsForWeek } from "@/lib/tiers";
+import { checkAndAwardTitles } from "@/lib/titles";
 
 // getWeekBounds() sans argument résout toujours "la semaine de maintenant" :
 // une activité qui arrive en retard sur sa semaine (backfill, resynchro
@@ -21,13 +23,11 @@ export interface RecomputedWeek {
   hallOfFameResult: Awaited<ReturnType<typeof archiveHallOfFameForWeek>>;
 }
 
-// Recalcule weekly_scores, country_scores (déprécié Sprint 13, conservé pour
-// ne pas perdre l'historique si les ligues par pays reviennent un jour), les
-// cohortes de paliers, le Hall of Fame et les badges (Sprint 14) pour les
-// RECOMPUTE_WEEKS dernières semaines, de la plus ancienne à la plus récente
-// (important pour les cohortes : un mouvement de palier appliqué sur une
-// semaine ancienne doit être visible avant de calculer la cohorte de la
-// semaine suivante).
+// Recalcule saisons/weekly_scores/country_scores/cohortes/Hall of
+// Fame/badges/titres pour les RECOMPUTE_WEEKS dernières semaines, de la plus
+// ancienne à la plus récente (important pour les cohortes : un mouvement de
+// palier appliqué sur une semaine ancienne doit être visible avant de
+// calculer la cohorte de la semaine suivante).
 //
 // Utilisée par le cron nocturne (app/api/cron/compute-scores) et par le
 // rattrapage déclenché à la reconnexion Strava (app/api/strava/callback).
@@ -35,6 +35,11 @@ export async function recomputeRecentWeeks(
   admin: SupabaseClient,
   weeks: number = RECOMPUTE_WEEKS
 ): Promise<RecomputedWeek[]> {
+  // Clôture de saison (Sprint 15) : doit s'exécuter avant la boucle
+  // hebdomadaire, pour qu'une saison tout juste créée soit déjà active pour
+  // le calcul de country_scores de la semaine en cours.
+  await checkSeasonCompletion(admin);
+
   const { weekStart: currentWeekStart } = getWeekBounds();
   const now = new Date();
 
@@ -69,10 +74,12 @@ export async function recomputeRecentWeeks(
     });
   }
 
-  // Badges cumulatifs (distance/D+/régularité) : vérifiés une seule fois pour
-  // l'ensemble des utilisateurs actifs sur toute la fenêtre recalculée,
-  // plutôt que 4 fois (un total all-time ne dépend pas de la semaine).
-  await checkCumulativeBadges(admin, Array.from(activeUserIds));
+  // Badges/titres cumulatifs : vérifiés une seule fois pour l'ensemble des
+  // utilisateurs actifs sur toute la fenêtre recalculée, plutôt qu'à chaque
+  // semaine (un total all-time ne dépend pas de la semaine).
+  const activeUserIdsArray = Array.from(activeUserIds);
+  await checkCumulativeBadges(admin, activeUserIdsArray);
+  await checkAndAwardTitles(admin, activeUserIdsArray);
 
   return recomputedWeeks;
 }

@@ -84,6 +84,11 @@ export async function ingestStravaActivity(
           total_elevation_gain: activity.total_elevation_gain,
           has_gps: true,
           activity_date: activity.start_date_local.slice(0, 10),
+          // Découpage en chaîne plutôt que Date() (comme activity_date
+          // ci-dessus) : start_date_local n'est pas un vrai horodatage UTC,
+          // le "Z" final représente en réalité l'heure locale de l'activité.
+          start_hour_local: Number.parseInt(activity.start_date_local.slice(11, 13), 10),
+          sport_type: activity.sport_type ?? activity.type ?? null,
           avg_heartrate: activity.average_heartrate ?? null,
           route_polyline: activity.map?.summary_polyline ?? null,
           photo_url: photoUrl,

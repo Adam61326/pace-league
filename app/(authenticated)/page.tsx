@@ -1,12 +1,14 @@
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
 import { StreakBadge } from "@/components/streak-badge";
+import { TitleBadge } from "@/components/title-badge";
 import { getCountryFlag } from "@/lib/countries";
 import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreaks } from "@/lib/streak";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getDisplayTitles } from "@/lib/titles";
 import Link from "next/link";
 
 // Filet de sécurité simple, pas une vraie pagination (hors scope de ce sprint).
@@ -101,10 +103,9 @@ export default async function Home({
     .map((row) => ({ ...row, user: extractUser(row.users) }))
     .filter((row): row is typeof row & { user: LeaderboardUser } => row.user !== null);
 
-  const streaks = await getStreaks(
-    admin,
-    leaderboard.map((row) => row.user_id)
-  );
+  const leaderboardUserIds = leaderboard.map((row) => row.user_id);
+  const streaks = await getStreaks(admin, leaderboardUserIds);
+  const titles = await getDisplayTitles(admin, leaderboardUserIds);
 
   let publicStats: PublicStats | undefined;
   if (!user) {
@@ -229,6 +230,7 @@ export default async function Home({
                         {formatDisplayName(row.user.strava_firstname, row.user.strava_lastname)}
                         {isMe && <span className="text-zinc-400"> (toi)</span>}
                       </span>
+                      {titles.get(row.user_id) && <TitleBadge label={titles.get(row.user_id)!.label} />}
                       {streakDays > 0 && (
                         <span className="block">
                           <StreakBadge days={streakDays} />

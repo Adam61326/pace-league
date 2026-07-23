@@ -77,7 +77,7 @@ export async function checkCumulativeBadges(
 
   const { data: activityRows, error } = await admin
     .from("activities")
-    .select("user_id, distance_km, total_elevation_gain")
+    .select("user_id, distance_km, total_elevation_gain, sport_type")
     .in("user_id", userIds)
     .gte("distance_km", MIN_VALID_DISTANCE_KM);
 

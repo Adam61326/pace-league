@@ -13,6 +13,12 @@ const PROTECTED_PATHS = [
   "/badges",
 ];
 
+// Onboarding pays (Sprint 15) : une connexion Google n'a jamais de
+// country_code (pas de métadonnées OAuth équivalentes au champ du formulaire
+// d'inscription classique). Exempté de PROTECTED_PATHS pour ne pas se
+// rediriger vers lui-même.
+const ONBOARDING_PATH = "/onboarding/pays";
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -51,6 +57,21 @@ export async function proxy(request: NextRequest) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirectTo", request.nextUrl.pathname);
     return NextResponse.redirect(redirectUrl);
+  }
+
+  // Bloque l'accès au reste de l'app tant que le pays n'est pas renseigné
+  // (CLAUDE.md Sprint 15) : ne concerne que les chemins déjà protégés
+  // ci-dessus, jamais les pages publiques ("/", /classement, /hall-of-fame).
+  if (isProtected && user && !request.nextUrl.pathname.startsWith(ONBOARDING_PATH)) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("country_code")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.country_code) {
+      return NextResponse.redirect(new URL(ONBOARDING_PATH, request.url));
+    }
   }
 
   return response;

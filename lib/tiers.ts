@@ -232,20 +232,47 @@ export async function computeTierCohortsForWeek(
       if (memberError) throw memberError;
 
       if (weekEnded) {
-        for (const member of memberRows) {
-          if (member.movement === "stable") continue;
+        const movers = memberRows.filter((m) => m.movement !== "stable");
 
-          const newTier =
-            member.movement === "promoted" ? nextTierUp(tier) : nextTierDown(tier);
-
-          if (!newTier) continue; // déjà au palier max (legend) ou min (bronze_3)
-
-          const { error: updateError } = await admin
+        if (movers.length > 0) {
+          const { data: moverTiers, error: moverTiersError } = await admin
             .from("player_tiers")
-            .update({ tier: newTier, updated_at: new Date().toISOString() })
-            .eq("user_id", member.user_id);
+            .select("user_id, best_tier_this_season")
+            .in(
+              "user_id",
+              movers.map((m) => m.user_id)
+            );
 
-          if (updateError) throw updateError;
+          if (moverTiersError) throw moverTiersError;
+
+          const bestSoFarByUser = new Map(
+            (moverTiers ?? []).map((r) => [r.user_id, r.best_tier_this_season as Tier])
+          );
+
+          for (const member of movers) {
+            const newTier =
+              member.movement === "promoted" ? nextTierUp(tier) : nextTierDown(tier);
+
+            if (!newTier) continue; // déjà au palier max (legend) ou min (bronze_3)
+
+            // best_tier_this_season (Sprint 15) ne peut que monter : une
+            // relégation fait baisser `tier` mais ne doit jamais faire
+            // oublier un palier plus haut déjà atteint cette saison.
+            const currentBest = bestSoFarByUser.get(member.user_id) ?? tier;
+            const bestTierThisSeason =
+              TIER_ORDER.indexOf(newTier) > TIER_ORDER.indexOf(currentBest) ? newTier : currentBest;
+
+            const { error: updateError } = await admin
+              .from("player_tiers")
+              .update({
+                tier: newTier,
+                best_tier_this_season: bestTierThisSeason,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", member.user_id);
+
+            if (updateError) throw updateError;
+          }
         }
       }
     }

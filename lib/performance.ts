@@ -1,4 +1,4 @@
-import { getWeekBounds, toDateString } from "@/lib/scoring";
+import { getWeekBounds, SCORABLE_SPORT_TYPES, toDateString } from "@/lib/scoring";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // Algorithme de performance à 4 axes (Sprint 12). Principe commun aux 3 axes
@@ -27,7 +27,7 @@ export interface PerformanceAxis {
   trend: "hausse" | "stable" | "baisse" | null; // uniquement renseigné pour Efficacité
 }
 
-interface Activity {
+export interface Activity {
   date: string;
   distanceKm: number;
   movingTimeSeconds: number;
@@ -35,19 +35,19 @@ interface Activity {
   avgHeartrate: number | null;
 }
 
-function mondayOf(dateStr: string): string {
+export function mondayOf(dateStr: string): string {
   const { weekStart } = getWeekBounds(new Date(`${dateStr}T00:00:00Z`));
   return toDateString(weekStart);
 }
 
-function addDays(dateStr: string, days: number): string {
+export function addDays(dateStr: string, days: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return toDateString(d);
 }
 
 // Tous les lundis de `firstWeek` à `lastWeek` inclus.
-function weekAnchors(firstWeek: string, lastWeek: string): string[] {
+export function weekAnchors(firstWeek: string, lastWeek: string): string[] {
   const result: string[] = [];
   let cursor = firstWeek;
   while (cursor <= lastWeek) {
@@ -62,7 +62,7 @@ function weekAnchors(firstWeek: string, lastWeek: string): string[] {
 // meilleure (temps prédit Vitesse) : le percentile reste alors "% de
 // l'historique moins bon que maintenant", cohérent avec les autres axes où
 // 100 = "meilleur que jamais".
-function percentileOfLast(series: number[], higherIsBetter: boolean): number | null {
+export function percentileOfLast(series: number[], higherIsBetter: boolean): number | null {
   if (series.length < MIN_WINDOW_SAMPLES) return null;
   const current = series[series.length - 1];
   const notBetterCount = higherIsBetter
@@ -163,7 +163,7 @@ function riegelPredicted10kSeconds(distanceKm: number, movingTimeSeconds: number
   return movingTimeSeconds * Math.pow(10 / distanceKm, 1.06);
 }
 
-function computeVitesseAxis(activities: Activity[]): PerformanceAxis {
+export function computeVitesseAxis(activities: Activity[]): PerformanceAxis {
   const base: Omit<PerformanceAxis, "percentile" | "unavailableReason" | "detail"> = {
     key: "vitesse",
     label: "Vitesse",
@@ -380,12 +380,16 @@ export async function computePerformanceAxes(
 ): Promise<PerformanceAxis[]> {
   const { data: rows } = await supabase
     .from("activities")
-    .select("activity_date, distance_km, moving_time_seconds, total_elevation_gain, avg_heartrate")
+    .select("activity_date, distance_km, moving_time_seconds, total_elevation_gain, avg_heartrate, sport_type")
     .eq("user_id", userId)
     .order("activity_date", { ascending: true })
     .limit(MAX_ACTIVITIES);
 
+  // sport_type (Sprint 15) : une sortie vélo/marche ne doit pas influencer
+  // les axes de performance, tous pensés pour la course à pied (Riegel,
+  // TRIMP...). Même filtre que lib/scoring.ts isActivityScorable.
   const activities: Activity[] = (rows ?? [])
+    .filter((r) => SCORABLE_SPORT_TYPES.includes(r.sport_type as (typeof SCORABLE_SPORT_TYPES)[number]))
     .map((r) => ({
       date: r.activity_date,
       distanceKm: Number(r.distance_km ?? 0),

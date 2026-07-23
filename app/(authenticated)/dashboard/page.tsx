@@ -10,7 +10,7 @@ import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { findOrCreateMyCohortId, getCohortMembers, getOrCreatePlayerTier } from "@/lib/tiers";
+import { findOrCreateMyCohortId, getCohortMembers, getOrCreatePlayerTier, TIER_META, type Tier } from "@/lib/tiers";
 import {
   IconActivity,
   IconAward,
@@ -160,6 +160,24 @@ export default async function DashboardPage({
     key: row.badge_key,
     label: Array.isArray(row.badges) ? (row.badges[0]?.label ?? row.badge_key) : (row.badges?.label ?? row.badge_key),
   }));
+
+  // Trophées de saison (Sprint 15) : le palier lui-même reste permanent,
+  // ceci est juste un instantané archivé à chaque clôture de saison.
+  interface SeasonTrophyRow {
+    best_tier_reached: Tier;
+    seasons: { season_number: number } | { season_number: number }[] | null;
+  }
+  const { data: trophyRows } = await supabase
+    .from("season_trophies")
+    .select("best_tier_reached, seasons(season_number)")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .returns<SeasonTrophyRow[]>();
+
+  const seasonTrophies = (trophyRows ?? []).map((row) => {
+    const season = Array.isArray(row.seasons) ? row.seasons[0] : row.seasons;
+    return { seasonNumber: season?.season_number ?? null, tier: row.best_tier_reached };
+  });
 
   const { data: hrProfile } = await supabase
     .from("users")
@@ -626,6 +644,32 @@ export default async function DashboardPage({
             </div>
           )}
         </section>
+
+        {/* Trophées de saison (Sprint 15) */}
+        {seasonTrophies.length > 0 && (
+          <section className="flex flex-col gap-4">
+            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+              <IconTrophy size={16} stroke={1.75} />
+              Trophées de saison
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {seasonTrophies.map((trophy, index) => {
+                const meta = TIER_META[trophy.tier];
+                return (
+                  <div
+                    key={index}
+                    className={`flex flex-col items-center gap-1 rounded-md border border-white/10 px-4 py-3 ${meta.bgClass}`}
+                  >
+                    <span className={`text-sm font-semibold ${meta.colorClass}`}>{meta.label}</span>
+                    <span className="text-xs text-zinc-400">
+                      {trophy.seasonNumber != null ? `Saison ${trophy.seasonNumber}` : "Saison"}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* Performance à 4 axes */}
         <section className="flex flex-col gap-4">

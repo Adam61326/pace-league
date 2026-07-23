@@ -3,6 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // Barème Sprint 3 (précisé explicitement par le produit, remplace le
 // brouillon "Logique de scoring" du CLAUDE.md pour ce qui est implémenté ici).
 export const MIN_VALID_DISTANCE_KM = 1.5; // filtre anti-spam
+// Seuls ces types d'activité Strava sont scorables (Sprint 15) : corrige un
+// bug où des sorties vélo/marche déjà synchronisées ont pu être comptées à
+// tort. `sport_type` null (activités synchronisées avant ce sprint, pas
+// encore rétro-corrigées) est traité comme non scorable par prudence plutôt
+// que de présumer "Run".
+export const SCORABLE_SPORT_TYPES = ["Run", "TrailRun"] as const;
 const DISTANCE_POINTS_PER_KM = 2;
 const MAX_DAILY_DISTANCE_KM = 40;
 const ELEVATION_POINTS_PER_METERS = 20; // 1 point / tranche de 20m
@@ -16,6 +22,7 @@ export interface ScoredActivity {
   activity_date: string; // 'YYYY-MM-DD'
   distance_km: number | null;
   total_elevation_gain: number | null;
+  sport_type: string | null;
 }
 
 export interface WeeklyScoreResult {
@@ -36,8 +43,14 @@ export interface DayScore {
 
 // Une activité sous ce seuil n'est jamais prise en compte dans le score
 // (anti-spam), qu'elle soit seule ou groupée avec d'autres le même jour.
-export function isActivityScorable(activity: { distance_km: number | null }): boolean {
-  return (activity.distance_km ?? 0) >= MIN_VALID_DISTANCE_KM;
+// Depuis Sprint 15, exclut aussi tout ce qui n'est pas une course à pied
+// (Ride, Walk, Hike...) même si le reste des filtres anti-triche passe.
+export function isActivityScorable(activity: {
+  distance_km: number | null;
+  sport_type: string | null;
+}): boolean {
+  if ((activity.distance_km ?? 0) < MIN_VALID_DISTANCE_KM) return false;
+  return SCORABLE_SPORT_TYPES.includes(activity.sport_type as (typeof SCORABLE_SPORT_TYPES)[number]);
 }
 
 // Score d'une seule journée à partir de ses activités déjà filtrées
@@ -145,7 +158,7 @@ export async function computeWeeklyScores(
 
   const { data: activities, error } = await admin
     .from("activities")
-    .select("user_id, activity_date, distance_km, total_elevation_gain")
+    .select("user_id, activity_date, distance_km, total_elevation_gain, sport_type")
     .gte("activity_date", weekStartStr)
     .lte("activity_date", weekEndStr);
 

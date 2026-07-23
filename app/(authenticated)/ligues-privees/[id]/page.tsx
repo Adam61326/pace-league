@@ -1,8 +1,10 @@
 import { Avatar } from "@/components/avatar";
+import { TitleBadge } from "@/components/title-badge";
 import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getDisplayTitles } from "@/lib/titles";
 import { notFound, redirect } from "next/navigation";
 
 interface MemberRow {
@@ -61,6 +63,10 @@ export default async function LiguePriveePage({
     );
 
   const pointsByUser = new Map((scores ?? []).map((s) => [s.user_id, Number(s.total_points)]));
+  const titles = await getDisplayTitles(
+    admin,
+    (members ?? []).map((m) => m.user_id)
+  );
 
   const leaderboard: MemberRow[] = (members ?? [])
     .map((m) => {
@@ -105,9 +111,12 @@ export default async function LiguePriveePage({
                   lastname={member.strava_lastname}
                   size={32}
                 />
-                <span className="flex-1 font-medium text-white">
-                  {formatDisplayName(member.strava_firstname, member.strava_lastname)}
-                  {isMe && <span className="text-zinc-400"> (toi)</span>}
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium text-white">
+                    {formatDisplayName(member.strava_firstname, member.strava_lastname)}
+                    {isMe && <span className="text-zinc-400"> (toi)</span>}
+                  </span>
+                  {titles.get(member.user_id) && <TitleBadge label={titles.get(member.user_id)!.label} />}
                 </span>
                 <span className="font-semibold text-white">{member.total_points} pts</span>
               </li>

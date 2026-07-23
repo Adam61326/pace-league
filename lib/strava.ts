@@ -190,6 +190,11 @@ export interface StravaActivityDetail {
   start_date_local: string; // ISO 8601
   start_latlng: [number, number] | null;
   manual: boolean;
+  // sport_type est le champ moderne (plus granulaire, ex "TrailRun") ;
+  // `type` est l'ancien champ, toujours renvoyé pour compatibilité. On
+  // capture sport_type en priorité (Sprint 15), avec repli sur `type`.
+  sport_type?: string;
+  type?: string;
   // Absent (pas juste 0) si l'activité n'a pas de donnée cardiaque.
   average_heartrate?: number | null;
   map?: { summary_polyline?: string | null } | null;

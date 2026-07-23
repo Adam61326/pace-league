@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/avatar";
 import { SubTabs } from "@/components/sub-tabs";
+import { TitleBadge } from "@/components/title-badge";
 import { getCountryFlag } from "@/lib/countries";
 import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
@@ -12,6 +13,7 @@ import {
 } from "@/lib/tiers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getDisplayTitles } from "@/lib/titles";
 import { IconCrown, IconCrownFilled, IconDiamondFilled, IconMedal } from "@tabler/icons-react";
 import { redirect } from "next/navigation";
 
@@ -45,6 +47,10 @@ export default async function LiguesPage() {
 
   const cohortId = await findOrCreateMyCohortId(admin, user.id, weekStartStr, weekStart, weekEnd);
   const members = cohortId ? await getCohortMembers(admin, cohortId) : [];
+  const titles = await getDisplayTitles(
+    admin,
+    members.map((m) => m.user_id)
+  );
 
   const meta = TIER_META[tier];
   const hasMovementZones = members.some((m) => m.movement !== "stable");
@@ -100,9 +106,12 @@ export default async function LiguesPage() {
                       size={28}
                     />
                     <span aria-hidden>{getCountryFlag(row.user.country_code)}</span>
-                    <span className="flex-1 font-medium text-white">
-                      {formatDisplayName(row.user.strava_firstname, row.user.strava_lastname)}
-                      {isMe && <span className="text-zinc-400"> (toi)</span>}
+                    <span className="min-w-0 flex-1">
+                      <span className="font-medium text-white">
+                        {formatDisplayName(row.user.strava_firstname, row.user.strava_lastname)}
+                        {isMe && <span className="text-zinc-400"> (toi)</span>}
+                      </span>
+                      {titles.get(row.user_id) && <TitleBadge label={titles.get(row.user_id)!.label} />}
                     </span>
                     <span className="w-20 text-right font-semibold text-white">
                       {row.week_points} pts

@@ -1,5 +1,6 @@
 "use client";
 
+import { GoogleSignInButton } from "@/components/google-signin-button";
 import { getSortedCountries } from "@/lib/countries";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -118,6 +119,14 @@ export function SignupForm() {
       >
         {loading ? "Création…" : "Créer mon compte"}
       </button>
+      <div className="flex items-center gap-3 text-xs text-zinc-500">
+        <span className="h-px flex-1 bg-white/10" />
+        ou
+        <span className="h-px flex-1 bg-white/10" />
+      </div>
+
+      <GoogleSignInButton redirectTo="/dashboard" />
+
       <p className="text-center text-sm text-zinc-400">
         Déjà inscrit ?{" "}
         <Link href="/login" className="font-medium text-white underline">
