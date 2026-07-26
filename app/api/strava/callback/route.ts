@@ -1,4 +1,5 @@
 import { encryptToken } from "@/lib/crypto";
+import { formatDisplayName } from "@/lib/display-name";
 import { backfillRecentStravaActivities } from "@/lib/strava-backfill";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -59,6 +60,27 @@ export async function GET(request: NextRequest) {
       .eq("id", user.id);
 
     if (error) throw error;
+
+    // Suggestion de nom affiché (Sprint 16) : seulement à la toute première
+    // connexion Strava (display_name encore null) — une reconnexion ou un
+    // rafraîchissement de token ne doit jamais écraser une valeur que
+    // l'utilisateur a personnalisée depuis sur /parametres.
+    if (tokenResponse.athlete.firstname) {
+      const suggestedDisplayName = formatDisplayName(
+        null,
+        tokenResponse.athlete.firstname,
+        tokenResponse.athlete.lastname || null
+      );
+      const { error: displayNameError } = await supabase
+        .from("users")
+        .update({ display_name: suggestedDisplayName })
+        .eq("id", user.id)
+        .is("display_name", null);
+
+      if (displayNameError) {
+        console.error("strava callback: display_name prefill failed", user.id, displayNameError);
+      }
+    }
 
     dashboardUrl.searchParams.set("strava", "connected");
 

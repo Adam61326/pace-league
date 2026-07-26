@@ -1,6 +1,4 @@
-import { Avatar } from "@/components/avatar";
-import { TitleBadge } from "@/components/title-badge";
-import { formatDisplayName } from "@/lib/display-name";
+import { LeaderboardList, type LeaderboardRowData } from "@/components/leaderboard-list";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 
 interface MemberRow {
   user_id: string;
+  display_name: string | null;
   strava_firstname: string | null;
   strava_lastname: string | null;
   strava_profile_photo_url: string | null;
@@ -47,7 +46,7 @@ export default async function LiguePriveePage({
 
   const { data: members } = await admin
     .from("league_members")
-    .select("user_id, users(strava_firstname, strava_lastname, strava_profile_photo_url)")
+    .select("user_id, users(display_name, strava_firstname, strava_lastname, strava_profile_photo_url)")
     .eq("league_id", id);
 
   const { weekStart, weekEnd } = getWeekBounds();
@@ -73,6 +72,7 @@ export default async function LiguePriveePage({
       const profile = Array.isArray(m.users) ? m.users[0] : m.users;
       return {
         user_id: m.user_id,
+        display_name: profile?.display_name ?? null,
         strava_firstname: profile?.strava_firstname ?? null,
         strava_lastname: profile?.strava_lastname ?? null,
         strava_profile_photo_url: profile?.strava_profile_photo_url ?? null,
@@ -93,36 +93,22 @@ export default async function LiguePriveePage({
           </p>
         </div>
 
-        <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
-          {leaderboard.map((member, index) => {
-            const isMe = member.user_id === user.id;
-            return (
-              <li
-                key={member.user_id}
-                className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                  isMe ? "bg-white/[.06]" : ""
-                }`}
-              >
-                <span className="w-6 text-right text-zinc-400">{index + 1}</span>
-                <Avatar
-                  userId={member.user_id}
-                  photoUrl={member.strava_profile_photo_url}
-                  firstname={member.strava_firstname}
-                  lastname={member.strava_lastname}
-                  size={32}
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="font-medium text-white">
-                    {formatDisplayName(member.strava_firstname, member.strava_lastname)}
-                    {isMe && <span className="text-zinc-400"> (toi)</span>}
-                  </span>
-                  {titles.get(member.user_id) && <TitleBadge label={titles.get(member.user_id)!.label} />}
-                </span>
-                <span className="font-semibold text-white">{member.total_points} pts</span>
-              </li>
-            );
-          })}
-        </ol>
+        <LeaderboardList
+          rows={leaderboard.map(
+            (member, index): LeaderboardRowData => ({
+              userId: member.user_id,
+              rank: index + 1,
+              displayName: member.display_name,
+              firstname: member.strava_firstname,
+              lastname: member.strava_lastname,
+              photoUrl: member.strava_profile_photo_url,
+              countryCode: null,
+              titleLabel: titles.get(member.user_id)?.label ?? null,
+              points: member.total_points,
+              isMe: member.user_id === user.id,
+            })
+          )}
+        />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { StravaActions } from "../strava-actions";
 import { DeleteAccountForm } from "./delete-account-form";
+import { DisplayNameForm } from "./display-name-form";
 import { ProfileForm } from "./profile-form";
 
 export default async function ParametresPage() {
@@ -18,7 +19,7 @@ export default async function ParametresPage() {
   const { data: profile } = await supabase
     .from("users")
     .select(
-      "country_code, strava_athlete_id, birth_date, gender, height_cm, weight_kg, hr_max, hr_rest"
+      "country_code, strava_athlete_id, display_name, birth_date, gender, height_cm, weight_kg, hr_max, hr_rest"
     )
     .eq("id", user.id)
     .single();
@@ -49,6 +50,11 @@ export default async function ParametresPage() {
               </span>
             </p>
           </div>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Identité</h2>
+          <DisplayNameForm displayName={profile?.display_name ?? null} />
         </section>
 
         <section className="flex flex-col gap-3">

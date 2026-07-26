@@ -1,0 +1,151 @@
+import { Avatar } from "@/components/avatar";
+import { SearchInput } from "@/components/search-input";
+import { getCountryFlag, getSortedCountries } from "@/lib/countries";
+import { formatDisplayName } from "@/lib/display-name";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { DEFAULT_TIER, TIER_META, type Tier } from "@/lib/tiers";
+import { IconMoodEmpty, IconSearch } from "@tabler/icons-react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+
+const MAX_RESULTS = 30;
+
+interface SearchResultUser {
+  id: string;
+  display_name: string | null;
+  strava_firstname: string | null;
+  strava_lastname: string | null;
+  strava_profile_photo_url: string | null;
+  country_code: string | null;
+}
+
+// Recherche de coureurs par nom ou pays (Sprint 16). Deux requêtes séparées
+// (nom / pays) plutôt qu'un seul .or() : combiner un ilike texte libre et un
+// .in() sur les codes pays dans la même expression de filtre PostgREST
+// obligerait à construire une chaîne fragile ; ici on fusionne simplement les
+// deux résultats par id.
+export default async function RecherchePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login?redirectTo=/recherche");
+  }
+
+  const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q.trim() : "";
+
+  const admin = createAdminClient();
+  let results: SearchResultUser[] = [];
+
+  if (q) {
+    // Retire les caractères qui casseraient la syntaxe de filtre PostgREST
+    // (ilike/or) plutôt que de tenter de les échapper.
+    const safeTerm = q.replace(/[%_,()]/g, "");
+    const matchingCountryCodes = getSortedCountries()
+      .filter((c) => c.name.toLowerCase().includes(q.toLowerCase()))
+      .map((c) => c.code);
+
+    const [{ data: byName }, { data: byCountry }] = await Promise.all([
+      safeTerm
+        ? admin
+            .from("users")
+            .select("id, display_name, strava_firstname, strava_lastname, strava_profile_photo_url, country_code")
+            .or(
+              `display_name.ilike.%${safeTerm}%,strava_firstname.ilike.%${safeTerm}%,strava_lastname.ilike.%${safeTerm}%`
+            )
+            .limit(MAX_RESULTS)
+            .returns<SearchResultUser[]>()
+        : Promise.resolve({ data: [] as SearchResultUser[] }),
+      matchingCountryCodes.length > 0
+        ? admin
+            .from("users")
+            .select("id, display_name, strava_firstname, strava_lastname, strava_profile_photo_url, country_code")
+            .in("country_code", matchingCountryCodes)
+            .limit(MAX_RESULTS)
+            .returns<SearchResultUser[]>()
+        : Promise.resolve({ data: [] as SearchResultUser[] }),
+    ]);
+
+    const merged = new Map<string, SearchResultUser>();
+    for (const row of [...(byName ?? []), ...(byCountry ?? [])]) {
+      merged.set(row.id, row);
+    }
+    results = Array.from(merged.values()).slice(0, MAX_RESULTS);
+  }
+
+  const userIds = results.map((r) => r.id);
+  const { data: tierRows } =
+    userIds.length > 0
+      ? await admin.from("player_tiers").select("user_id, tier").in("user_id", userIds)
+      : { data: [] };
+  const tierByUser = new Map((tierRows ?? []).map((r) => [r.user_id, r.tier as Tier]));
+
+  return (
+    <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
+      <div className="flex w-full max-w-2xl flex-col gap-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Recherche</h1>
+        <SearchInput initialQuery={q} />
+
+        {q === "" ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center text-zinc-500">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+              <IconSearch size={28} className="text-zinc-600" />
+            </span>
+            <div>
+              <p className="text-[15px] font-semibold text-zinc-300">Trouvez un coureur</p>
+              <p className="text-sm">Recherchez par nom ou par pays</p>
+            </div>
+          </div>
+        ) : results.length === 0 ? (
+          <div className="flex flex-col items-center gap-4 py-20 text-center text-zinc-500">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
+              <IconMoodEmpty size={28} className="text-zinc-600" />
+            </span>
+            <div>
+              <p className="text-[15px] font-semibold text-zinc-300">Aucun coureur trouvé</p>
+              <p className="text-sm">Aucun résultat pour « {q} »</p>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {results.map((row) => {
+              const tier = tierByUser.get(row.id) ?? DEFAULT_TIER;
+              return (
+                <Link
+                  key={row.id}
+                  href={`/profil/${row.id}`}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.02] p-3.5 hover:border-white/25"
+                >
+                  <Avatar
+                    userId={row.id}
+                    photoUrl={row.strava_profile_photo_url}
+                    firstname={row.strava_firstname}
+                    lastname={row.strava_lastname}
+                    size={44}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[14.5px] font-semibold text-white">
+                      {formatDisplayName(row.display_name, row.strava_firstname, row.strava_lastname)}
+                    </p>
+                    <p className="flex items-center gap-2 text-xs text-zinc-400">
+                      {row.country_code && <span aria-hidden>{getCountryFlag(row.country_code)}</span>}
+                      <span>{TIER_META[tier].label}</span>
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

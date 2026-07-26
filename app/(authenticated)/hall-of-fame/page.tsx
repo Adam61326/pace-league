@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const MAX_WEEKS = 52;
 
 interface HallOfFameUser {
+  display_name: string | null;
   strava_firstname: string | null;
   strava_lastname: string | null;
   strava_profile_photo_url: string | null;
@@ -38,7 +39,7 @@ export default async function HallOfFamePage() {
   const { data: rows } = await admin
     .from("hall_of_fame")
     .select(
-      "week_start_date, rank, total_points, user_id, users!inner(strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
+      "week_start_date, rank, total_points, user_id, users!inner(display_name, strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
     )
     .order("week_start_date", { ascending: false })
     .order("rank", { ascending: true })
@@ -98,7 +99,7 @@ export default async function HallOfFamePage() {
                         />
                         <span aria-hidden>{getCountryFlag(row.user.country_code)}</span>
                         <span className="flex-1 font-medium text-white">
-                          {formatDisplayName(row.user.strava_firstname, row.user.strava_lastname)}
+                          {formatDisplayName(row.user.display_name, row.user.strava_firstname, row.user.strava_lastname)}
                         </span>
                         <span className="font-semibold text-white">
                           {Number(row.total_points).toFixed(1)} pts

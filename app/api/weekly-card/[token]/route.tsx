@@ -17,7 +17,7 @@ export async function GET(
 
   const { data: user } = await admin
     .from("users")
-    .select("id, strava_firstname, strava_lastname, strava_profile_photo_url")
+    .select("id, display_name, strava_firstname, strava_lastname, strava_profile_photo_url")
     .eq("share_token", token)
     .maybeSingle();
 
@@ -71,7 +71,7 @@ export async function GET(
   const rankDelta =
     currentRank != null && previousRank != null ? previousRank - currentRank : null;
 
-  const displayName = formatDisplayName(user.strava_firstname, user.strava_lastname);
+  const displayName = formatDisplayName(user.display_name, user.strava_firstname, user.strava_lastname);
   const weekLabel = `${weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC", day: "2-digit", month: "short" })} – ${weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC", day: "2-digit", month: "short" })}`;
 
   const stats = [

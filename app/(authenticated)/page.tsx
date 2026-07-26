@@ -1,9 +1,5 @@
-import { Avatar } from "@/components/avatar";
+import { LeaderboardList, type LeaderboardRowData } from "@/components/leaderboard-list";
 import { Logo } from "@/components/logo";
-import { StreakBadge } from "@/components/streak-badge";
-import { TitleBadge } from "@/components/title-badge";
-import { getCountryFlag } from "@/lib/countries";
-import { formatDisplayName } from "@/lib/display-name";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreaks } from "@/lib/streak";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -15,6 +11,7 @@ import Link from "next/link";
 const MAX_ROWS = 200;
 
 interface LeaderboardUser {
+  display_name: string | null;
   strava_firstname: string | null;
   strava_lastname: string | null;
   strava_profile_photo_url: string | null;
@@ -87,7 +84,7 @@ export default async function Home({
   let query = admin
     .from("weekly_scores")
     .select(
-      "user_id, total_points, users!inner(strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
+      "user_id, total_points, users!inner(display_name, strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
     )
     .eq("week_start_date", weekStartStr)
     .order("total_points", { ascending: false })
@@ -205,43 +202,23 @@ export default async function Home({
               Aucun coureur classé cette semaine pour le moment.
             </p>
           ) : (
-            <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
-              {leaderboard.map((row, index) => {
-                const isMe = user != null && row.user_id === user.id;
-                const streakDays = streaks.get(row.user_id) ?? 0;
-                return (
-                  <li
-                    key={row.user_id}
-                    className={`flex items-center gap-3 px-4 py-3 text-sm ${
-                      isMe ? "bg-white/[.06]" : ""
-                    }`}
-                  >
-                    <span className="w-6 text-right text-zinc-400">{index + 1}</span>
-                    <Avatar
-                      userId={row.user_id}
-                      photoUrl={row.user.strava_profile_photo_url}
-                      firstname={row.user.strava_firstname}
-                      lastname={row.user.strava_lastname}
-                      size={28}
-                    />
-                    <span aria-hidden>{getCountryFlag(row.user.country_code)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="font-medium text-white">
-                        {formatDisplayName(row.user.strava_firstname, row.user.strava_lastname)}
-                        {isMe && <span className="text-zinc-400"> (toi)</span>}
-                      </span>
-                      {titles.get(row.user_id) && <TitleBadge label={titles.get(row.user_id)!.label} />}
-                      {streakDays > 0 && (
-                        <span className="block">
-                          <StreakBadge days={streakDays} />
-                        </span>
-                      )}
-                    </span>
-                    <span className="font-semibold text-white">{row.total_points} pts</span>
-                  </li>
-                );
-              })}
-            </ol>
+            <LeaderboardList
+              rows={leaderboard.map(
+                (row, index): LeaderboardRowData => ({
+                  userId: row.user_id,
+                  rank: index + 1,
+                  displayName: row.user.display_name,
+                  firstname: row.user.strava_firstname,
+                  lastname: row.user.strava_lastname,
+                  photoUrl: row.user.strava_profile_photo_url,
+                  countryCode: row.user.country_code,
+                  titleLabel: titles.get(row.user_id)?.label ?? null,
+                  streakDays: streaks.get(row.user_id) ?? 0,
+                  points: row.total_points,
+                  isMe: user != null && row.user_id === user.id,
+                })
+              )}
+            />
           )}
         </div>
       </div>

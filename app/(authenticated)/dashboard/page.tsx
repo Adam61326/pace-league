@@ -11,6 +11,7 @@ import { getStreak } from "@/lib/streak";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { findOrCreateMyCohortId, getCohortMembers, getOrCreatePlayerTier, TIER_META, type Tier } from "@/lib/tiers";
+import { getWeeklyUserSummary } from "@/lib/weekly-stats";
 import {
   IconActivity,
   IconAward,
@@ -195,35 +196,11 @@ export default async function DashboardPage({
   // Résumé "cette semaine" : toutes les activités synchronisées de la
   // semaine (pas seulement celles qui comptent pour le score — le seuil
   // anti-spam de 1.5km n'exclut qu'une poignée de sorties, la vue d'ensemble
-  // reste plus honnête en montrant tout ce qui a été fait).
-  const { data: weekActivities } = await supabase
-    .from("activities")
-    .select("activity_date, distance_km, total_elevation_gain, moving_time_seconds, avg_heartrate")
-    .eq("user_id", user.id)
-    .gte("activity_date", weekStartStr)
-    .lte("activity_date", weekEndStr);
-
-  const totalKm = (weekActivities ?? []).reduce((sum, a) => sum + Number(a.distance_km ?? 0), 0);
-  const totalDplus = (weekActivities ?? []).reduce(
-    (sum, a) => sum + Number(a.total_elevation_gain ?? 0),
-    0
-  );
-  const totalMovingTime = (weekActivities ?? []).reduce(
-    (sum, a) => sum + (a.moving_time_seconds ?? 0),
-    0
-  );
-  const activeDays = new Set((weekActivities ?? []).map((a) => a.activity_date)).size;
-  const avgPaceSecPerKm = totalKm > 0 ? totalMovingTime / totalKm : null;
-
-  // Moyenne de fréquence cardiaque de la semaine : seulement si au moins une
-  // activité a la donnée (pas de capteur = absente, jamais traitée comme 0).
-  const heartrateReadings = (weekActivities ?? [])
-    .map((a) => (a.avg_heartrate != null ? Number(a.avg_heartrate) : null))
-    .filter((v): v is number => v != null);
-  const avgHeartrate =
-    heartrateReadings.length > 0
-      ? heartrateReadings.reduce((sum, v) => sum + v, 0) / heartrateReadings.length
-      : null;
+  // reste plus honnête en montrant tout ce qui a été fait). Extrait dans
+  // lib/weekly-stats.ts (Sprint 16) pour être réutilisé par la page profil
+  // publique et le panel stats hebdo.
+  const weeklySummary = await getWeeklyUserSummary(supabase, user.id, weekStartStr, weekEndStr);
+  const { totalKm, totalDplus, activeDays, avgPaceSecPerKm, avgHeartrate } = weeklySummary;
 
   // Répartition du score de la semaine, depuis weekly_scores (calculé par le
   // cron quotidien — peut ne pas encore exister le jour même).
@@ -453,7 +430,7 @@ export default async function DashboardPage({
                     size={28}
                   />
                   <span className="flex-1 font-medium text-white">
-                    {formatDisplayName(rival.user.strava_firstname, rival.user.strava_lastname)}
+                    {formatDisplayName(rival.user.display_name, rival.user.strava_firstname, rival.user.strava_lastname)}
                   </span>
                   <span className="text-xs text-green-400">
                     +{(rival.week_points - myWeekPoints).toFixed(1)} pts à combler
@@ -486,7 +463,7 @@ export default async function DashboardPage({
                     size={28}
                   />
                   <span className="flex-1 font-medium text-white">
-                    {formatDisplayName(rival.user.strava_firstname, rival.user.strava_lastname)}
+                    {formatDisplayName(rival.user.display_name, rival.user.strava_firstname, rival.user.strava_lastname)}
                   </span>
                   <span className="text-xs text-zinc-400">
                     {(myWeekPoints - rival.week_points).toFixed(1)} pts d&apos;avance

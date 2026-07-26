@@ -296,6 +296,7 @@ export async function computeTierCohortsForWeek(
 }
 
 export interface CohortMemberProfile {
+  display_name: string | null;
   strava_firstname: string | null;
   strava_lastname: string | null;
   strava_profile_photo_url: string | null;
@@ -369,7 +370,7 @@ export async function getCohortMembers(
   const { data, error } = await admin
     .from("cohort_members")
     .select(
-      "user_id, week_points, rank, movement, users!inner(strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
+      "user_id, week_points, rank, movement, users!inner(display_name, strava_firstname, strava_lastname, strava_profile_photo_url, country_code)"
     )
     .eq("cohort_id", cohortId)
     .order("rank", { ascending: true });

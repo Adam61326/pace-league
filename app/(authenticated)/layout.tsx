@@ -1,3 +1,4 @@
+import { formatDisplayName } from "@/lib/display-name";
 import { createClient } from "@/lib/supabase/server";
 import { NavBar } from "./nav-bar";
 
@@ -18,14 +19,14 @@ export default async function AuthenticatedLayout({
 
   const { data: profile } = await supabase
     .from("users")
-    .select("strava_firstname, strava_lastname, strava_profile_photo_url")
+    .select("display_name, strava_firstname, strava_lastname, strava_profile_photo_url")
     .eq("id", user.id)
     .single();
 
-  const displayName =
-    profile?.strava_firstname != null
-      ? [profile.strava_firstname, profile.strava_lastname].filter(Boolean).join(" ")
-      : user.email!;
+  const hasNameSource = Boolean(profile?.display_name) || profile?.strava_firstname != null;
+  const displayName = hasNameSource
+    ? formatDisplayName(profile?.display_name ?? null, profile?.strava_firstname ?? null, profile?.strava_lastname ?? null)
+    : user.email!;
 
   return (
     <div className="flex flex-1 flex-col bg-background">

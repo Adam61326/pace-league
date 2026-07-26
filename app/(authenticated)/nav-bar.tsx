@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 // (voir SubTabs sur ces pages), pas depuis la navbar principale.
 const NAV_LINKS = [
   { href: "/", label: "Classement" },
+  { href: "/recherche", label: "Recherche" },
   { href: "/dashboard", label: "Tableau de bord" },
   { href: "/ligues", label: "Ligues" },
   { href: "/hall-of-fame", label: "Hall of Fame" },
