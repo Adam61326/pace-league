@@ -2,6 +2,7 @@ import { Avatar } from "@/components/avatar";
 import { ContributionCalendar } from "@/components/contribution-calendar";
 import { PerformanceRadar } from "@/components/performance-radar";
 import { RouteMap } from "@/components/route-map";
+import { ScoreRing } from "@/components/score-ring";
 import { SubTabs } from "@/components/sub-tabs";
 import { WeeklyShareCard } from "@/components/weekly-share-card";
 import { formatDisplayName } from "@/lib/display-name";
@@ -334,8 +335,10 @@ export default async function DashboardPage({
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">Tableau de bord</h1>
-              <p className="text-sm text-zinc-400">
+              <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                Tableau de bord
+              </h1>
+              <p className="text-sm text-foreground-secondary">
                 Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
                 {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
               </p>
@@ -346,15 +349,33 @@ export default async function DashboardPage({
         </div>
 
         {strava === "connected" && (
-          <p className="rounded-md bg-green-950/60 px-3 py-2 text-sm text-green-300">
+          <p className="rounded-[10px] bg-green-950/60 px-3 py-2 text-sm text-green-300">
             Compte Strava connecté avec succès.
           </p>
         )}
         {stravaError && (
-          <p className="rounded-md bg-red-950/60 px-3 py-2 text-sm text-red-300">
+          <p className="rounded-[10px] bg-alert/15 px-3 py-2 text-sm text-alert">
             {STRAVA_ERROR_MESSAGES[stravaError] ?? "Une erreur est survenue."}
           </p>
         )}
+
+        {/* Score de forme (widget signature) : anneau de progression basé sur
+            la régularité réelle de la semaine (activeDays), pas un score
+            composite inventé — reflète directement le seuil du bonus
+            régularité (CLAUDE.md : +20 pts à 3 jours, +40 pts à 5 jours). */}
+        <section className="flex items-center gap-6 rounded-2xl border border-border bg-surface p-6">
+          <ScoreRing percent={(Math.min(activeDays, 5) / 5) * 100} value={`${activeDays}j`} label="cette semaine" />
+          <div className="flex flex-col gap-1">
+            <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">Régularité</h2>
+            <p className="text-sm text-foreground-secondary">
+              {activeDays >= 5
+                ? "Bonus régularité maximal débloqué (+40 pts) — 5 jours actifs ou plus cette semaine."
+                : activeDays >= 3
+                  ? `Bonus régularité débloqué (+20 pts) — encore ${5 - activeDays} jour${5 - activeDays > 1 ? "s" : ""} pour le bonus maximal.`
+                  : `Encore ${3 - activeDays} jour${3 - activeDays > 1 ? "s" : ""} actif${3 - activeDays > 1 ? "s" : ""} cette semaine pour débloquer le bonus régularité (+20 pts).`}
+            </p>
+          </div>
+        </section>
 
         {/* Série en cours (mise en avant) */}
         {streakDays > 0 && (
@@ -363,10 +384,10 @@ export default async function DashboardPage({
               🔥
             </span>
             <div className="flex flex-col">
-              <span className="text-2xl font-semibold tracking-tight text-white">
-                {streakDays} jour{streakDays > 1 ? "s" : ""} de série
+              <span className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                <span className="font-mono">{streakDays}</span> jour{streakDays > 1 ? "s" : ""} de série
               </span>
-              <span className="text-sm text-zinc-400">
+              <span className="text-sm text-foreground-secondary">
                 Jours consécutifs avec au moins une activité valide — continue comme ça !
               </span>
             </div>
@@ -376,12 +397,12 @@ export default async function DashboardPage({
         {/* Dernière activité (tracé + photo, quand disponibles) */}
         {latestActivity && hasLatestMedia && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
               Dernière activité — {latestActivity.name?.trim() || "Sortie course à pied"}
             </h2>
             <div className="flex flex-wrap gap-4">
               {latestActivity.route_polyline && (
-                <div className="overflow-hidden rounded-md border border-white/10 bg-surface/60 p-3">
+                <div className="overflow-hidden rounded-[10px] border border-border bg-surface/60 p-3">
                   <RouteMap polyline={latestActivity.route_polyline} width={260} height={160} />
                 </div>
               )}
@@ -390,7 +411,7 @@ export default async function DashboardPage({
                 <img
                   src={latestActivity.photo_url}
                   alt=""
-                  className="h-[186px] w-[260px] rounded-md border border-white/10 object-cover"
+                  className="h-[186px] w-[260px] rounded-[10px] border border-border object-cover"
                 />
               )}
             </div>
@@ -399,16 +420,16 @@ export default async function DashboardPage({
 
         {/* Résumé de la semaine */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Cette semaine</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Cette semaine</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {weekStatTiles.map(({ icon: Icon, label, value }) => (
               <div
                 key={label}
-                className="flex flex-col gap-2 rounded-md border border-white/10 p-4"
+                className="flex flex-col gap-2 rounded-[10px] border border-border p-4"
               >
-                <Icon size={18} stroke={1.75} className="text-zinc-400" />
-                <span className="text-lg font-semibold tracking-tight text-white">{value}</span>
-                <span className="text-xs text-zinc-400">{label}</span>
+                <Icon size={18} stroke={1.75} className="text-foreground-secondary" />
+                <span className="font-mono text-lg font-semibold tracking-tight text-foreground">{value}</span>
+                <span className="text-xs text-foreground-secondary">{label}</span>
               </div>
             ))}
           </div>
@@ -418,8 +439,8 @@ export default async function DashboardPage({
             petite pour avoir le moindre rival (ex: cohorte solo). */}
         {(rivalsAbove.length > 0 || rivalsBelow.length > 0) && (
           <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Rivaux</h2>
-            <div className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Rivaux</h2>
+            <div className="flex flex-col divide-y divide-border rounded-[10px] border border-border">
               {rivalsAbove.map((rival) => (
                 <div key={rival.user_id} className="flex items-center gap-3 px-4 py-3 text-sm">
                   <Avatar
@@ -429,13 +450,13 @@ export default async function DashboardPage({
                     lastname={rival.user.strava_lastname}
                     size={28}
                   />
-                  <span className="flex-1 font-medium text-white">
+                  <span className="flex-1 font-medium text-foreground">
                     {formatDisplayName(rival.user.display_name, rival.user.strava_firstname, rival.user.strava_lastname)}
                   </span>
-                  <span className="text-xs text-green-400">
+                  <span className="font-mono text-xs text-green-400">
                     +{(rival.week_points - myWeekPoints).toFixed(1)} pts à combler
                   </span>
-                  <span className="w-16 text-right font-semibold text-white">
+                  <span className="w-16 text-right font-mono font-semibold text-foreground">
                     {rival.week_points} pts
                   </span>
                 </div>
@@ -448,8 +469,8 @@ export default async function DashboardPage({
                   lastname={null}
                   size={28}
                 />
-                <span className="flex-1 font-medium text-white">Toi</span>
-                <span className="w-16 text-right font-semibold text-white">
+                <span className="flex-1 font-medium text-foreground">Toi</span>
+                <span className="w-16 text-right font-mono font-semibold text-foreground">
                   {myWeekPoints} pts
                 </span>
               </div>
@@ -462,13 +483,13 @@ export default async function DashboardPage({
                     lastname={rival.user.strava_lastname}
                     size={28}
                   />
-                  <span className="flex-1 font-medium text-white">
+                  <span className="flex-1 font-medium text-foreground">
                     {formatDisplayName(rival.user.display_name, rival.user.strava_firstname, rival.user.strava_lastname)}
                   </span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="font-mono text-xs text-foreground-secondary">
                     {(myWeekPoints - rival.week_points).toFixed(1)} pts d&apos;avance
                   </span>
-                  <span className="w-16 text-right font-semibold text-white">
+                  <span className="w-16 text-right font-mono font-semibold text-foreground">
                     {rival.week_points} pts
                   </span>
                 </div>
@@ -479,7 +500,7 @@ export default async function DashboardPage({
 
         {/* Calendrier de régularité */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
             Régularité ({CALENDAR_WEEKS} dernières semaines)
           </h2>
           <div className="overflow-x-auto">
@@ -490,13 +511,13 @@ export default async function DashboardPage({
         {/* Répartition du score */}
         <section className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
               Répartition du score
             </h2>
-            <span className="text-sm font-semibold text-white">{totalPoints.toFixed(1)} pts</span>
+            <span className="font-mono text-sm font-semibold text-foreground">{totalPoints.toFixed(1)} pts</span>
           </div>
           {totalPoints === 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-foreground-secondary">
               Pas encore de score calculé cette semaine — ça se met à jour chaque nuit.
             </p>
           ) : (
@@ -504,14 +525,14 @@ export default async function DashboardPage({
               {breakdown.map(({ label, points }) => (
                 <div key={label} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-400">{label}</span>
-                    <span className="font-medium text-white">
-                      {points.toFixed(1)} pts <span className="text-zinc-400">({pct(points, totalPoints)}%)</span>
+                    <span className="text-foreground-secondary">{label}</span>
+                    <span className="font-mono font-medium text-foreground">
+                      {points.toFixed(1)} pts <span className="text-foreground-secondary">({pct(points, totalPoints)}%)</span>
                     </span>
                   </div>
                   <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[.08]">
                     <div
-                      className="h-full rounded-full bg-accent"
+                      className="gradient-signature h-full rounded-full"
                       style={{ width: `${pct(points, totalPoints)}%` }}
                     />
                   </div>
@@ -523,42 +544,42 @@ export default async function DashboardPage({
 
         {/* Records personnels */}
         <section className="flex flex-col gap-4">
-          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground-secondary">
             <IconTrophy size={16} stroke={1.75} />
             Records personnels
           </h2>
           {!hasAnyRecord ? (
-            <p className="text-sm text-zinc-400">Pas encore d&apos;activité enregistrée.</p>
+            <p className="text-sm text-foreground-secondary">Pas encore d&apos;activité enregistrée.</p>
           ) : (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
-                <IconRoute size={18} stroke={1.75} className="text-zinc-400" />
-                <span className="text-lg font-semibold tracking-tight text-white">
+              <div className="flex flex-col gap-2 rounded-[10px] border border-border p-4">
+                <IconRoute size={18} stroke={1.75} className="text-foreground-secondary" />
+                <span className="font-mono text-lg font-semibold tracking-tight text-foreground">
                   {longestRun ? `${Number(longestRun.distance_km).toFixed(2)} km` : "—"}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-foreground-secondary">
                   Plus longue sortie
                   {longestRun && ` · ${formatShortDate(longestRun.activity_date)}`}
                 </span>
               </div>
-              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
-                <IconMountain size={18} stroke={1.75} className="text-zinc-400" />
-                <span className="text-lg font-semibold tracking-tight text-white">
+              <div className="flex flex-col gap-2 rounded-[10px] border border-border p-4">
+                <IconMountain size={18} stroke={1.75} className="text-foreground-secondary" />
+                <span className="font-mono text-lg font-semibold tracking-tight text-foreground">
                   {biggestClimb ? `${Math.round(Number(biggestClimb.total_elevation_gain))} m` : "—"}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-foreground-secondary">
                   Plus gros D+
                   {biggestClimb && ` · ${formatShortDate(biggestClimb.activity_date)}`}
                 </span>
               </div>
-              <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
-                <IconClock size={18} stroke={1.75} className="text-zinc-400" />
-                <span className="text-lg font-semibold tracking-tight text-white">
+              <div className="flex flex-col gap-2 rounded-[10px] border border-border p-4">
+                <IconClock size={18} stroke={1.75} className="text-foreground-secondary" />
+                <span className="font-mono text-lg font-semibold tracking-tight text-foreground">
                   {bestPaceActivity
                     ? formatPace(3600 / Number(bestPaceActivity.avg_speed_kmh))
                     : "—"}
                 </span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-xs text-foreground-secondary">
                   Meilleure allure (≥3km)
                   {bestPaceActivity && ` · ${formatShortDate(bestPaceActivity.activity_date)}`}
                 </span>
@@ -570,7 +591,7 @@ export default async function DashboardPage({
         {/* Records par distance (best_efforts Strava) */}
         {bestEffortByDistance.size > 0 && (
           <section className="flex flex-col gap-4">
-            <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+            <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
               Records par distance
             </h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
@@ -579,12 +600,12 @@ export default async function DashboardPage({
                 return (
                   <div
                     key={label}
-                    className="flex flex-col gap-1 rounded-md border border-white/10 p-4"
+                    className="flex flex-col gap-1 rounded-[10px] border border-border p-4"
                   >
-                    <span className="text-lg font-semibold tracking-tight text-white">
+                    <span className="font-mono text-lg font-semibold tracking-tight text-foreground">
                       {best ? formatDuration(best.elapsedTimeSeconds) : "—"}
                     </span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-foreground-secondary">
                       {label}
                       {best && ` · ${formatShortDate(best.achievedAt)}`}
                     </span>
@@ -598,7 +619,7 @@ export default async function DashboardPage({
         {/* Badges (teaser, page complète sur /badges) */}
         <section className="flex flex-col gap-4">
           <div className="flex items-baseline justify-between">
-            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground-secondary">
               <IconAward size={16} stroke={1.75} />
               Badges
             </h2>
@@ -607,13 +628,13 @@ export default async function DashboardPage({
             </Link>
           </div>
           {recentBadges.length === 0 ? (
-            <p className="text-sm text-zinc-400">Pas encore de badge débloqué.</p>
+            <p className="text-sm text-foreground-secondary">Pas encore de badge débloqué.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {recentBadges.map((badge) => (
                 <span
                   key={badge.key}
-                  className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-white"
+                  className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-foreground"
                 >
                   {badge.label}
                 </span>
@@ -625,7 +646,7 @@ export default async function DashboardPage({
         {/* Trophées de saison (Sprint 15) */}
         {seasonTrophies.length > 0 && (
           <section className="flex flex-col gap-4">
-            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+            <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground-secondary">
               <IconTrophy size={16} stroke={1.75} />
               Trophées de saison
             </h2>
@@ -635,10 +656,10 @@ export default async function DashboardPage({
                 return (
                   <div
                     key={index}
-                    className={`flex flex-col items-center gap-1 rounded-md border border-white/10 px-4 py-3 ${meta.bgClass}`}
+                    className={`flex flex-col items-center gap-1 rounded-[10px] border border-border px-4 py-3 ${meta.bgClass}`}
                   >
                     <span className={`text-sm font-semibold ${meta.colorClass}`}>{meta.label}</span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-foreground-secondary">
                       {trophy.seasonNumber != null ? `Saison ${trophy.seasonNumber}` : "Saison"}
                     </span>
                   </div>
@@ -650,7 +671,7 @@ export default async function DashboardPage({
 
         {/* Performance à 4 axes */}
         <section className="flex flex-col gap-4">
-          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-zinc-400">
+          <h2 className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground-secondary">
             <IconActivity size={16} stroke={1.75} />
             Performance
           </h2>
@@ -658,14 +679,14 @@ export default async function DashboardPage({
             <PerformanceRadar axes={performanceAxes} />
             <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-2" style={{ minWidth: 240 }}>
               {performanceAxes.map((axis) => (
-                <div key={axis.key} className="flex flex-col gap-1 rounded-md border border-white/10 p-4">
-                  <span className="text-sm font-medium text-white">{axis.label}</span>
+                <div key={axis.key} className="flex flex-col gap-1 rounded-[10px] border border-border p-4">
+                  <span className="text-sm font-medium text-foreground">{axis.label}</span>
                   {axis.percentile != null ? (
                     <>
-                      <span className="text-lg font-semibold tracking-tight text-white">
+                      <span className="font-mono text-lg font-semibold tracking-tight text-foreground">
                         {axis.percentile}e percentile
                       </span>
-                      {axis.detail && <span className="text-xs text-zinc-400">{axis.detail}</span>}
+                      {axis.detail && <span className="text-xs text-foreground-secondary">{axis.detail}</span>}
                       {axis.trend && (
                         <span
                           className={`text-xs font-medium ${
@@ -673,7 +694,7 @@ export default async function DashboardPage({
                               ? "text-green-400"
                               : axis.trend === "baisse"
                                 ? "text-red-400"
-                                : "text-zinc-400"
+                                : "text-foreground-secondary"
                           }`}
                         >
                           Tendance : {axis.trend}
@@ -681,7 +702,7 @@ export default async function DashboardPage({
                       )}
                     </>
                   ) : (
-                    <span className="text-xs text-zinc-400">{axis.unavailableReason}</span>
+                    <span className="text-xs text-foreground-secondary">{axis.unavailableReason}</span>
                   )}
                 </div>
               ))}
@@ -691,7 +712,7 @@ export default async function DashboardPage({
 
         {/* Tendance 4 semaines */}
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
             Tendance ({WEEKS_OF_TREND} dernières semaines)
           </h2>
           <WeeklyTrend trend={trend} />

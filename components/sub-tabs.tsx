@@ -18,8 +18,8 @@ export function SubTabs({ tabs, activeHref }: { tabs: SubTab[]; activeHref: stri
           href={tab.href}
           className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
             tab.href === activeHref
-              ? "bg-accent text-black"
-              : "border border-white/10 text-zinc-300 hover:bg-white/[.06]"
+              ? "gradient-signature text-white"
+              : "border border-border text-foreground-secondary hover:bg-white/[.06]"
           }`}
         >
           {tab.label}

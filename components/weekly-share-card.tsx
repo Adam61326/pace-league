@@ -14,7 +14,7 @@ export function WeeklyShareCard({ shareToken }: { shareToken: string }) {
       <button
         type="button"
         onClick={() => setShow(true)}
-        className="flex h-9 w-fit items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-black transition-colors hover:bg-accent-hover"
+        className="gradient-signature flex h-9 w-fit items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
       >
         Partager ma semaine
       </button>
@@ -27,20 +27,20 @@ export function WeeklyShareCard({ shareToken }: { shareToken: string }) {
       <img
         src={src}
         alt="Carte de la semaine"
-        className="w-full max-w-md rounded-md border border-white/10"
+        className="w-full max-w-md rounded-[10px] border border-border"
       />
       <div className="flex gap-2">
         <a
           href={src}
           download="ma-semaine-paceleague.png"
-          className="flex h-9 items-center justify-center rounded-full border border-white/10 px-4 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[.06]"
+          className="flex h-9 items-center justify-center rounded-full border border-border px-4 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/[.06]"
         >
           Télécharger
         </a>
         <button
           type="button"
           onClick={() => setShow(false)}
-          className="flex h-9 items-center justify-center rounded-full border border-white/10 px-4 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[.06]"
+          className="flex h-9 items-center justify-center rounded-full border border-border px-4 text-xs font-medium text-foreground-secondary transition-colors hover:bg-white/[.06]"
         >
           Masquer
         </button>
