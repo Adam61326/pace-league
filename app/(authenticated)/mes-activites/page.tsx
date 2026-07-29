@@ -9,7 +9,8 @@ import {
   type ScoredActivity,
 } from "@/lib/scoring";
 import { createClient } from "@/lib/supabase/server";
-import { IconTemperature, IconWind } from "@tabler/icons-react";
+import { IconChevronRight, IconTemperature, IconWind } from "@tabler/icons-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 const WEEKS_OF_HISTORY = 4;
@@ -102,11 +103,13 @@ export default async function MesActivitesPage() {
       <div className="flex w-full max-w-2xl flex-col gap-8">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Mes activités</h1>
-            <p className="text-sm text-zinc-400">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Mes activités
+            </h1>
+            <p className="text-sm text-foreground-secondary">
               {WEEKS_OF_HISTORY} dernières semaines, jour par jour.
             </p>
-            <p className="mt-2 text-xs text-zinc-500">
+            <p className="mt-2 text-xs text-foreground-tertiary">
               Seules les activités qui passent les filtres GPS et vitesse sont synchronisées
               depuis Strava : celles exclues pour ces raisons n&apos;apparaissent pas ici. Deux
               autres filtres s&apos;appliquent sur les activités listées ci-dessous sans les
@@ -118,7 +121,7 @@ export default async function MesActivitesPage() {
         </div>
 
         {weeks.length === 0 ? (
-          <p className="text-sm text-zinc-400">Aucune activité synchronisée sur cette période.</p>
+          <p className="text-sm text-foreground-secondary">Aucune activité synchronisée sur cette période.</p>
         ) : (
           <div className="flex flex-col gap-10">
             {weeks.map(([weekStartStr, days]) => {
@@ -132,7 +135,7 @@ export default async function MesActivitesPage() {
 
               return (
                 <section key={weekStartStr} className="flex flex-col gap-4">
-                  <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+                  <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
                     Semaine du {weekStartDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
                     {weekEndDate.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
                   </h2>
@@ -144,71 +147,74 @@ export default async function MesActivitesPage() {
                         scorable.length > 0 ? computeDayScore(scorable).total_points : 0;
 
                       return (
-                        <div key={day} className="rounded-md border border-white/10">
-                          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
-                            <span className="text-sm font-medium text-white capitalize">
+                        <div key={day} className="rounded-[10px] border border-border">
+                          <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                            <span className="text-sm font-medium text-foreground capitalize">
                               {formatDay(day)}
                             </span>
-                            <span className="text-sm font-semibold text-white">
+                            <span className="font-mono text-sm font-semibold text-foreground">
                               {dayScore > 0 ? `${dayScore.toFixed(1)} pts` : "0 pt"}
                             </span>
                           </div>
-                          <ul className="flex flex-col divide-y divide-white/10">
+                          <ul className="flex flex-col divide-y divide-border">
                             {dayActivities.map((activity) => {
                               const excluded = !isActivityScorable(activity);
                               const hasMedia = Boolean(activity.route_polyline || activity.photo_url);
                               return (
-                                <li
-                                  key={activity.id}
-                                  className="flex flex-col gap-2 px-4 py-3 text-sm"
-                                >
-                                  <div className="flex items-center justify-between gap-3">
-                                    <span className="font-medium text-white">
-                                      {activity.name?.trim() || "Sortie course à pied"}
-                                    </span>
-                                    <span className="shrink-0 text-zinc-400">
-                                      {(activity.distance_km ?? 0).toFixed(2)} km ·{" "}
-                                      {Math.round(activity.total_elevation_gain ?? 0)} m D+
-                                    </span>
-                                  </div>
-                                  {excluded && (
-                                    <span className="text-xs text-amber-400">
-                                      {(activity.distance_km ?? 0) < MIN_VALID_DISTANCE_KM
-                                        ? `Exclue du score : distance sous le seuil anti-spam (${MIN_VALID_DISTANCE_KM} km)`
-                                        : `Exclue du score : type d'activité non comptabilisé${activity.sport_type ? ` (${activity.sport_type})` : ""}`}
-                                    </span>
-                                  )}
-                                  {activity.weather_temp_celsius != null && (
-                                    <div className="flex items-center gap-3 text-xs text-zinc-400">
-                                      <span className="flex items-center gap-1">
-                                        <IconTemperature size={14} stroke={1.75} />
-                                        {Math.round(activity.weather_temp_celsius)}°C
+                                <li key={activity.id}>
+                                  <Link
+                                    href={`/mes-activites/${activity.id}`}
+                                    className="flex flex-col gap-2 px-4 py-3 text-sm transition-colors hover:bg-white/[.04]"
+                                  >
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="font-medium text-foreground">
+                                        {activity.name?.trim() || "Sortie course à pied"}
                                       </span>
-                                      {activity.weather_wind_kmh != null && (
+                                      <span className="flex shrink-0 items-center gap-1 font-mono text-foreground-secondary">
+                                        {(activity.distance_km ?? 0).toFixed(2)} km ·{" "}
+                                        {Math.round(activity.total_elevation_gain ?? 0)} m D+
+                                        <IconChevronRight size={14} className="text-foreground-tertiary" />
+                                      </span>
+                                    </div>
+                                    {excluded && (
+                                      <span className="text-xs text-amber-400">
+                                        {(activity.distance_km ?? 0) < MIN_VALID_DISTANCE_KM
+                                          ? `Exclue du score : distance sous le seuil anti-spam (${MIN_VALID_DISTANCE_KM} km)`
+                                          : `Exclue du score : type d'activité non comptabilisé${activity.sport_type ? ` (${activity.sport_type})` : ""}`}
+                                      </span>
+                                    )}
+                                    {activity.weather_temp_celsius != null && (
+                                      <div className="flex items-center gap-3 text-xs text-foreground-secondary">
                                         <span className="flex items-center gap-1">
-                                          <IconWind size={14} stroke={1.75} />
-                                          {Math.round(activity.weather_wind_kmh)} km/h
+                                          <IconTemperature size={14} stroke={1.75} />
+                                          {Math.round(activity.weather_temp_celsius)}°C
                                         </span>
-                                      )}
-                                    </div>
-                                  )}
-                                  {hasMedia && (
-                                    <div className="flex gap-2">
-                                      {activity.route_polyline && (
-                                        <div className="overflow-hidden rounded-md border border-white/10 bg-surface/60 p-1.5">
-                                          <RouteMap polyline={activity.route_polyline} width={110} height={70} />
-                                        </div>
-                                      )}
-                                      {activity.photo_url && (
-                                        // eslint-disable-next-line @next/next/no-img-element
-                                        <img
-                                          src={activity.photo_url}
-                                          alt=""
-                                          className="h-[70px] w-[110px] rounded-md border border-white/10 object-cover"
-                                        />
-                                      )}
-                                    </div>
-                                  )}
+                                        {activity.weather_wind_kmh != null && (
+                                          <span className="flex items-center gap-1">
+                                            <IconWind size={14} stroke={1.75} />
+                                            {Math.round(activity.weather_wind_kmh)} km/h
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                    {hasMedia && (
+                                      <div className="flex gap-2">
+                                        {activity.route_polyline && (
+                                          <div className="overflow-hidden rounded-[10px] border border-border bg-surface/60 p-1.5">
+                                            <RouteMap polyline={activity.route_polyline} width={110} height={70} />
+                                          </div>
+                                        )}
+                                        {activity.photo_url && (
+                                          // eslint-disable-next-line @next/next/no-img-element
+                                          <img
+                                            src={activity.photo_url}
+                                            alt=""
+                                            className="h-[70px] w-[110px] rounded-[10px] border border-border object-cover"
+                                          />
+                                        )}
+                                      </div>
+                                    )}
+                                  </Link>
                                 </li>
                               );
                             })}
@@ -224,13 +230,13 @@ export default async function MesActivitesPage() {
         )}
 
         {hasAnyWeather && (
-          <p className="text-xs text-zinc-600">
+          <p className="text-xs text-foreground-tertiary">
             Météo par{" "}
             <a
               href="https://open-meteo.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-zinc-400"
+              className="underline hover:text-foreground-secondary"
             >
               Open-Meteo.com
             </a>{" "}
