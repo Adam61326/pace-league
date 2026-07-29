@@ -17,12 +17,14 @@ export function Logo({
   return (
     <span className={`flex items-center gap-2.5 ${className}`}>
       <span
-        className="flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#39D353] to-[#1F9E4C]"
+        className="gradient-signature flex shrink-0 items-center justify-center rounded-full"
         style={{ width: mark, height: mark }}
       >
-        <IconRun size={icon} stroke={2.25} className="text-black" />
+        <IconRun size={icon} stroke={2.25} className="text-white" />
       </span>
-      <span className={`${text} font-semibold tracking-tight text-white`}>PaceLeague</span>
+      <span className={`${text} font-display font-semibold tracking-tight text-foreground`}>
+        PaceLeague
+      </span>
     </span>
   );
 }
