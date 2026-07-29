@@ -1,6 +1,6 @@
 import { formatDisplayName } from "@/lib/display-name";
 import { createClient } from "@/lib/supabase/server";
-import { NavBar } from "./nav-bar";
+import { Sidebar } from "./sidebar";
 
 export default async function AuthenticatedLayout({
   children,
@@ -29,8 +29,8 @@ export default async function AuthenticatedLayout({
     : user.email!;
 
   return (
-    <div className="flex flex-1 flex-col bg-background">
-      <NavBar
+    <div className="flex flex-1 bg-background">
+      <Sidebar
         userId={user.id}
         firstname={profile?.strava_firstname ?? null}
         lastname={profile?.strava_lastname ?? null}
@@ -38,7 +38,7 @@ export default async function AuthenticatedLayout({
         name={displayName}
         email={user.email!}
       />
-      <div className="flex flex-1 flex-col">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }
