@@ -83,24 +83,24 @@ function PanelContent({ userId, onClose }: { userId: string; onClose: () => void
   return (
     <>
       <div onClick={onClose} className="fixed inset-0 z-40 bg-black/60" aria-hidden />
-      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[400px] overflow-y-auto border-l border-white/10 bg-surface">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-surface px-5 py-4">
-          <span className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+      <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[400px] overflow-y-auto border-l border-border bg-surface">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+          <span className="text-xs font-semibold tracking-wide text-foreground-secondary uppercase">
             Stats hebdomadaires
           </span>
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-md bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white"
+            className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/5 text-foreground-secondary hover:bg-white/10 hover:text-foreground"
           >
             <IconX size={16} />
           </button>
         </div>
 
         <div className="flex flex-col gap-6 p-5">
-          {state.status === "loading" && <p className="text-sm text-zinc-400">Chargement…</p>}
+          {state.status === "loading" && <p className="text-sm text-foreground-secondary">Chargement…</p>}
           {state.status === "error" && (
-            <p className="text-sm text-zinc-400">Impossible de charger ce profil.</p>
+            <p className="text-sm text-foreground-secondary">Impossible de charger ce profil.</p>
           )}
 
           {state.status === "ready" && (
@@ -114,14 +114,14 @@ function PanelContent({ userId, onClose }: { userId: string; onClose: () => void
                   size={52}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-white">
+                  <p className="truncate font-semibold text-foreground">
                     {formatDisplayName(
                       state.data.user.displayName,
                       state.data.user.firstname,
                       state.data.user.lastname
                     )}
                   </p>
-                  <p className="flex items-center gap-2 text-xs text-zinc-400">
+                  <p className="flex items-center gap-2 text-xs text-foreground-secondary">
                     <span aria-hidden>{getCountryFlag(state.data.user.countryCode)}</span>
                     <span>{TIER_META[state.data.tier].label}</span>
                   </p>
@@ -135,30 +135,32 @@ function PanelContent({ userId, onClose }: { userId: string; onClose: () => void
               </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div className="rounded-md bg-white/5 p-3 text-center">
-                  <p className="text-lg font-bold text-white">{state.data.weekly.totalKm.toFixed(1)}</p>
-                  <p className="text-[11px] text-zinc-400">km</p>
+                <div className="rounded-[10px] bg-white/5 p-3 text-center">
+                  <p className="font-mono text-lg font-bold text-foreground">
+                    {state.data.weekly.totalKm.toFixed(1)}
+                  </p>
+                  <p className="text-[11px] text-foreground-secondary">km</p>
                 </div>
-                <div className="rounded-md bg-white/5 p-3 text-center">
-                  <p className="text-lg font-bold text-white">
+                <div className="rounded-[10px] bg-white/5 p-3 text-center">
+                  <p className="font-mono text-lg font-bold text-foreground">
                     {Math.round(state.data.weekly.totalDplus)}
                   </p>
-                  <p className="text-[11px] text-zinc-400">m D+</p>
+                  <p className="text-[11px] text-foreground-secondary">m D+</p>
                 </div>
-                <div className="rounded-md bg-white/5 p-3 text-center">
-                  <p className="text-lg font-bold text-white">{state.data.weekly.totalRuns}</p>
-                  <p className="text-[11px] text-zinc-400">sorties</p>
+                <div className="rounded-[10px] bg-white/5 p-3 text-center">
+                  <p className="font-mono text-lg font-bold text-foreground">{state.data.weekly.totalRuns}</p>
+                  <p className="text-[11px] text-foreground-secondary">sorties</p>
                 </div>
               </div>
 
               {state.data.weekly.avgPaceSecPerKm != null && (
-                <p className="-mt-4 text-center text-xs text-zinc-500">
+                <p className="-mt-4 text-center text-xs text-foreground-tertiary">
                   Allure moy. {formatPace(state.data.weekly.avgPaceSecPerKm)}
                 </p>
               )}
 
               <div>
-                <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+                <p className="mb-3 text-xs font-semibold tracking-wide text-foreground-secondary uppercase">
                   Performance
                 </p>
                 <div className="flex justify-center">
@@ -167,23 +169,23 @@ function PanelContent({ userId, onClose }: { userId: string; onClose: () => void
               </div>
 
               <div>
-                <p className="mb-3 text-xs font-semibold tracking-wide text-zinc-400 uppercase">Badges</p>
+                <p className="mb-3 text-xs font-semibold tracking-wide text-foreground-secondary uppercase">Badges</p>
                 {state.data.badges.length === 0 ? (
-                  <p className="text-sm text-zinc-400">Pas encore de badge débloqué.</p>
+                  <p className="text-sm text-foreground-secondary">Pas encore de badge débloqué.</p>
                 ) : (
                   <>
                     <div className="flex flex-wrap gap-2">
                       {state.data.badges.slice(0, BADGE_PREVIEW_COUNT).map((badge) => (
                         <span
                           key={badge.key}
-                          className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-white"
+                          className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-foreground"
                         >
                           {badge.label}
                         </span>
                       ))}
                     </div>
                     {state.data.badges.length > BADGE_PREVIEW_COUNT && (
-                      <p className="mt-2 text-xs text-zinc-500">
+                      <p className="mt-2 text-xs text-foreground-tertiary">
                         +{state.data.badges.length - BADGE_PREVIEW_COUNT} autres badges
                       </p>
                     )}
