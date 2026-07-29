@@ -19,6 +19,12 @@
 -- admin (service_role), à l'identique de leagues/league_members
 -- (20260717000005_add_private_leagues.sql) : aucune de ces trois tables n'a
 -- de policy d'insertion/mise à jour pour anon/authenticated.
+--
+-- Ordre du fichier : les tables clubs et club_members sont créées d'abord
+-- (dans cet ordre), puis toutes leurs policies ensemble — la policy de
+-- clubs référence club_members et inversement, les créer chacune juste
+-- après leur table respective provoquerait une erreur 42P01 (relation does
+-- not exist) sur la première des deux à être posée.
 
 -- ============================================================================
 -- clubs
@@ -33,22 +39,6 @@ create table public.clubs (
   created_by uuid not null references public.users (id) on delete cascade,
   created_at timestamptz not null default now()
 );
-
-alter table public.clubs enable row level security;
-
--- Pas de policy de lecture publique/par slug (contrairement à un futur
--- annuaire) : un club n'est visible que par ses propres membres, à l'image
--- de "members can view their leagues". Rejoindre étant uniquement par
--- invitation nominative, il n'y a pas besoin de lister/découvrir les clubs
--- existants avant d'en être membre.
-create policy "members can view their clubs"
-  on public.clubs for select
-  using (
-    exists (
-      select 1 from public.club_members cm
-      where cm.club_id = clubs.id and cm.user_id = auth.uid()
-    )
-  );
 
 -- ============================================================================
 -- club_members
@@ -68,7 +58,26 @@ create table public.club_members (
 
 create index club_members_user_id_idx on public.club_members (user_id);
 
+-- ============================================================================
+-- RLS clubs / club_members (posées une fois les deux tables créées, voir
+-- note d'ordre en tête de fichier)
+-- ============================================================================
+alter table public.clubs enable row level security;
 alter table public.club_members enable row level security;
+
+-- Pas de policy de lecture publique/par slug (contrairement à un futur
+-- annuaire) : un club n'est visible que par ses propres membres, à l'image
+-- de "members can view their leagues". Rejoindre étant uniquement par
+-- invitation nominative, il n'y a pas besoin de lister/découvrir les clubs
+-- existants avant d'en être membre.
+create policy "members can view their clubs"
+  on public.clubs for select
+  using (
+    exists (
+      select 1 from public.club_members cm
+      where cm.club_id = clubs.id and cm.user_id = auth.uid()
+    )
+  );
 
 -- Policy auto-référentielle standard (même modèle que
 -- "members can view fellow members of their leagues") : un membre voit les
