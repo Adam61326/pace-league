@@ -14,6 +14,7 @@ const PROTECTED_PATHS = [
   "/profil",
   "/recherche",
   "/historique",
+  "/records",
 ];
 
 // Onboarding pays (Sprint 15) : une connexion Google n'a jamais de

@@ -7,6 +7,7 @@ import { SubTabs } from "@/components/sub-tabs";
 import { WeeklyShareCard } from "@/components/weekly-share-card";
 import { formatDisplayName } from "@/lib/display-name";
 import { computePerformanceAxes } from "@/lib/performance";
+import { getPersonalRecords, STANDARD_DISTANCES } from "@/lib/records";
 import { getWeekBounds, toDateString } from "@/lib/scoring";
 import { getStreak } from "@/lib/streak";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,12 +62,6 @@ function formatShortDate(dateStr: string): string {
     timeZone: "UTC",
   });
 }
-
-// Distances standard affichées, dans cet ordre — best_efforts peut contenir
-// d'autres libellés Strava (ex: "400m", "1 mile") qu'on capture tous mais
-// n'affiche pas ici pour rester lisible. Casse exacte des libellés Strava
-// vérifiée en base ("5K"/"10K"/"15K", pas "5k") : ne pas la "normaliser".
-const STANDARD_DISTANCES = ["5K", "10K", "15K", "Half-Marathon", "Marathon"];
 
 function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
@@ -259,53 +254,15 @@ export default async function DashboardPage({
     kmByDate.set(a.activity_date, (kmByDate.get(a.activity_date) ?? 0) + Number(a.distance_km ?? 0));
   }
 
-  // Records personnels : requêtes ciblées (tri + limite), pas de recharge de
-  // toutes les activités en mémoire.
-  const [{ data: longestRun }, { data: biggestClimb }, { data: bestPaceActivity }] = await Promise.all([
-    supabase
-      .from("activities")
-      .select("distance_km, activity_date")
-      .eq("user_id", user.id)
-      .order("distance_km", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("activities")
-      .select("total_elevation_gain, activity_date")
-      .eq("user_id", user.id)
-      .order("total_elevation_gain", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("activities")
-      .select("avg_speed_kmh, activity_date")
-      .eq("user_id", user.id)
-      .gte("distance_km", 3)
-      .order("avg_speed_kmh", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
+  // Records personnels (extrait dans lib/records.ts, Sprint 17, reutilise
+  // par /records) : requetes ciblees (tri + limite), pas de recharge de
+  // toutes les activites en memoire.
+  const { longestRun, biggestClimb, bestPaceActivity, bestEffortByDistance } = await getPersonalRecords(
+    supabase,
+    user.id
+  );
 
   const hasAnyRecord = Boolean(longestRun || biggestClimb || bestPaceActivity);
-
-  // Records par distance standard (best_efforts Strava) : table petite par
-  // utilisateur, on récupère tout et on garde le meilleur (temps le plus
-  // court) par distance_label en mémoire plutôt que 5 requêtes séparées.
-  const { data: bestEffortsRows } = await supabase
-    .from("best_efforts")
-    .select("distance_label, elapsed_time_seconds, achieved_at")
-    .eq("user_id", user.id);
-
-  const bestEffortByDistance = new Map<string, { elapsedTimeSeconds: number; achievedAt: string }>();
-  for (const row of bestEffortsRows ?? []) {
-    const current = bestEffortByDistance.get(row.distance_label);
-    if (!current || row.elapsed_time_seconds < current.elapsedTimeSeconds) {
-      bestEffortByDistance.set(row.distance_label, {
-        elapsedTimeSeconds: row.elapsed_time_seconds,
-        achievedAt: row.achieved_at,
-      });
-    }
-  }
 
   // Dernière activité synchronisée, pour la mise en avant tracé/photo.
   const { data: latestActivity } = await supabase
