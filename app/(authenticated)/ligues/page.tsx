@@ -46,8 +46,10 @@ export default async function LiguesPage() {
           <div className="flex items-center gap-3">
             <TierBadge tier={tier} size={48} />
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight text-white">{meta.label}</h1>
-              <p className="text-sm text-zinc-400">
+              <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+                {meta.label}
+              </h1>
+              <p className="text-sm text-foreground-secondary">
                 Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
                 {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
               </p>
@@ -57,7 +59,7 @@ export default async function LiguesPage() {
         </div>
 
         {members.length === 0 ? (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-foreground-secondary">
             Pas encore de cohorte cette semaine : marque au moins une activité pour rejoindre ton
             palier {meta.label}.
           </p>
@@ -89,7 +91,7 @@ export default async function LiguesPage() {
             />
 
             {hasMovementZones ? (
-              <div className="flex flex-col gap-1 text-xs text-zinc-400">
+              <div className="flex flex-col gap-1 text-xs text-foreground-secondary">
                 <p className="flex items-center gap-2">
                   <span className="inline-block h-3 w-3 rounded-sm bg-green-500/10" />
                   Zone de promotion (top 5 : monte de palier en fin de semaine)
@@ -100,7 +102,7 @@ export default async function LiguesPage() {
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-zinc-400">
+              <p className="text-xs text-foreground-secondary">
                 Cohorte encore trop petite (moins de 10 joueurs actifs) pour un mouvement de
                 palier cette semaine.
               </p>

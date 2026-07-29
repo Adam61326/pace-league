@@ -41,8 +41,10 @@ export default async function LiguesPriveesPage() {
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Mes ligues privées</h1>
-            <p className="text-sm text-zinc-400">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Mes ligues privées
+            </h1>
+            <p className="text-sm text-foreground-secondary">
               Défie tes amis ou ton club dans une ligue privée, indépendante des classements
               pays/monde.
             </p>
@@ -51,19 +53,19 @@ export default async function LiguesPriveesPage() {
         </div>
 
         {leagues.length === 0 ? (
-          <p className="text-sm text-zinc-400">
+          <p className="text-sm text-foreground-secondary">
             Tu n&apos;es membre d&apos;aucune ligue privée pour le moment.
           </p>
         ) : (
-          <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
+          <ol className="flex flex-col divide-y divide-border rounded-2xl border border-border">
             {leagues.map((league) => (
               <li key={league.id}>
                 <Link
                   href={`/ligues-privees/${league.id}`}
                   className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/[.06]"
                 >
-                  <span className="flex-1 font-medium text-white">{league.name}</span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="flex-1 font-medium text-foreground">{league.name}</span>
+                  <span className="text-xs text-foreground-secondary">
                     {league.league_members[0]?.count ?? 0} membre
                     {(league.league_members[0]?.count ?? 0) > 1 ? "s" : ""}
                   </span>
@@ -75,7 +77,7 @@ export default async function LiguesPriveesPage() {
 
         <Link
           href="/ligues-privees/creer"
-          className="flex h-11 w-full items-center justify-center rounded-full bg-accent px-5 text-sm font-semibold text-black transition-colors hover:bg-accent-hover"
+          className="gradient-signature flex h-11 w-full items-center justify-center rounded-full px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
         >
           Créer une ligue
         </Link>

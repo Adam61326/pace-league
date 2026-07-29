@@ -85,9 +85,11 @@ export default async function LiguePriveePage({
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">{league.name}</h1>
-          <p className="text-sm text-zinc-400">
-            Code : <span className="font-mono tracking-widest">{league.code}</span> · Semaine du{" "}
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            {league.name}
+          </h1>
+          <p className="text-sm text-foreground-secondary">
+            Code : <span className="font-mono tracking-widest text-foreground">{league.code}</span> · Semaine du{" "}
             {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
             {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
           </p>
