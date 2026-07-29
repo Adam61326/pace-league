@@ -1,7 +1,7 @@
 "use client";
 
 import { IconSearch } from "@tabler/icons-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const DEBOUNCE_MS = 300;
@@ -10,6 +10,7 @@ const DEBOUNCE_MS = 300;
 // débouncé pour ne pas déclencher une requête serveur à chaque frappe.
 export function SearchInput({ initialQuery }: { initialQuery: string }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [value, setValue] = useState(initialQuery);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -23,8 +24,12 @@ export function SearchInput({ initialQuery }: { initialQuery: string }) {
     setValue(next);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(() => {
-      const params = new URLSearchParams();
+      // Clone les params existants (?club=, ?coach=, etc.) plutôt que de
+      // repartir de zéro : sinon taper une recherche efface silencieusement
+      // le mode contextuel d'invitation (club/coach) porté par l'URL.
+      const params = new URLSearchParams(searchParams.toString());
       if (next.trim()) params.set("q", next.trim());
+      else params.delete("q");
       router.replace(params.size > 0 ? `/recherche?${params.toString()}` : "/recherche");
     }, DEBOUNCE_MS);
   }
