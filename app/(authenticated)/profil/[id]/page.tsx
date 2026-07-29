@@ -75,8 +75,8 @@ export default async function ProfilPage({ params }: { params: Promise<{ id: str
             size={80}
           />
           <div className="flex min-w-[220px] flex-1 flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-white">{name}</h1>
-            <div className="flex items-center gap-2 text-sm text-zinc-400">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">{name}</h1>
+            <div className="flex items-center gap-2 text-sm text-foreground-secondary">
               <span aria-hidden>{getCountryFlag(profile.user.countryCode)}</span>
               <span className={tierMeta.colorClass}>{tierMeta.label}</span>
             </div>
@@ -85,38 +85,38 @@ export default async function ProfilPage({ params }: { params: Promise<{ id: str
         </div>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Cette semaine</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Cette semaine</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {statTiles.map((tile) => (
-              <div key={tile.label} className="flex flex-col gap-2 rounded-md border border-white/10 p-4">
-                <span className="text-lg font-semibold tracking-tight text-white">{tile.value}</span>
-                <span className="text-xs text-zinc-400">{tile.label}</span>
+              <div key={tile.label} className="flex flex-col gap-2 rounded-[10px] border border-border p-4">
+                <span className="font-mono text-lg font-semibold tracking-tight text-foreground">{tile.value}</span>
+                <span className="text-xs text-foreground-secondary">{tile.label}</span>
               </div>
             ))}
           </div>
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Performance</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Performance</h2>
           <div className="flex justify-center">
             <PerformanceRadar axes={profile.performanceAxes} />
           </div>
         </section>
 
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Badges</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Badges</h2>
           {badgesByCategory.length === 0 ? (
-            <p className="text-sm text-zinc-400">Pas encore de badge débloqué.</p>
+            <p className="text-sm text-foreground-secondary">Pas encore de badge débloqué.</p>
           ) : (
             <div className="flex flex-col gap-4">
               {badgesByCategory.map((cat) => (
                 <div key={cat.category} className="flex flex-col gap-2">
-                  <h3 className="text-xs font-semibold tracking-wide text-zinc-500 uppercase">{cat.label}</h3>
+                  <h3 className="text-xs font-semibold tracking-wide text-foreground-tertiary uppercase">{cat.label}</h3>
                   <div className="flex flex-wrap gap-2">
                     {cat.items.map((badge) => (
                       <span
                         key={badge.key}
-                        className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-white"
+                        className="rounded-full border border-accent/30 bg-accent/5 px-3 py-1.5 text-xs font-medium text-foreground"
                       >
                         {badge.label}
                       </span>
