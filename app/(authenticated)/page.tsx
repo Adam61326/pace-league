@@ -114,19 +114,19 @@ export default async function Home({
     <div className="flex flex-1 flex-col bg-background">
       {!user && (
         <>
-          <header className="border-b border-white/10">
+          <header className="border-b border-border">
             <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-6">
               <Logo />
               <div className="flex items-center gap-3">
                 <Link
                   href="/login"
-                  className="flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-white/[.06] hover:text-white"
+                  className="flex h-10 items-center justify-center rounded-full px-4 text-sm font-medium text-foreground-secondary transition-colors hover:bg-white/[.06] hover:text-foreground"
                 >
                   Se connecter
                 </Link>
                 <Link
                   href="/signup"
-                  className="flex h-10 items-center justify-center rounded-full bg-accent px-4 text-sm font-semibold text-black transition-colors hover:bg-accent-hover"
+                  className="gradient-signature flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                 >
                   Créer un compte
                 </Link>
@@ -134,25 +134,25 @@ export default async function Home({
             </div>
           </header>
 
-          <section className="relative flex flex-col items-center gap-3 overflow-hidden border-b border-white/10 px-6 py-8 text-center">
+          <section className="relative flex flex-col items-center gap-3 overflow-hidden border-b border-border px-6 py-8 text-center">
             <div
               aria-hidden
               className="pointer-events-none absolute top-[-10rem] left-1/2 h-[20rem] w-[36rem] -translate-x-1/2 rounded-full opacity-20 blur-[100px]"
               style={{
-                background: "radial-gradient(circle, #39D353 0%, #4D96FF 45%, transparent 75%)",
+                background: "radial-gradient(circle, #2563EB 0%, #06B6D4 45%, transparent 75%)",
               }}
             />
-            <p className="relative max-w-xl text-lg font-medium text-white sm:text-xl">
+            <p className="font-display relative max-w-xl text-lg font-medium text-foreground sm:text-xl">
               Chaque foulée compte, pour toi et pour ton pays
             </p>
             <Link
               href="/signup"
-              className="relative flex h-11 items-center justify-center rounded-full bg-accent px-6 text-sm font-semibold text-black transition-colors hover:bg-accent-hover"
+              className="gradient-signature relative flex h-11 items-center justify-center rounded-full px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
               Rejoindre gratuitement
             </Link>
             {publicStats && (
-              <p className="relative text-xs text-zinc-500">
+              <p className="relative text-xs text-foreground-tertiary">
                 {numberFormatter.format(publicStats.connected_users)} coureurs connectés ·{" "}
                 {numberFormatter.format(publicStats.countries_count)} pays représentés ·{" "}
                 {numberFormatter.format(Math.round(publicStats.total_km))} km cumulés
@@ -165,8 +165,10 @@ export default async function Home({
       <div className="flex flex-1 flex-col items-center gap-8 px-6 py-16">
         <div className="flex w-full max-w-2xl flex-col gap-6">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-white">Classement</h1>
-            <p className="text-sm text-zinc-400">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              Classement
+            </h1>
+            <p className="text-sm text-foreground-secondary">
               Semaine du {weekStart.toLocaleDateString("fr-FR", { timeZone: "UTC" })} au{" "}
               {weekEnd.toLocaleDateString("fr-FR", { timeZone: "UTC" })}
             </p>
@@ -178,8 +180,8 @@ export default async function Home({
                 href="/?scope=pays"
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   effectiveScope === "pays"
-                    ? "bg-accent text-black"
-                    : "border border-white/10 text-zinc-300 hover:bg-white/[.06]"
+                    ? "gradient-signature text-white"
+                    : "border border-border text-foreground-secondary hover:bg-white/[.06]"
                 }`}
               >
                 Mon pays
@@ -188,8 +190,8 @@ export default async function Home({
                 href="/?scope=monde"
                 className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
                   effectiveScope === "monde"
-                    ? "bg-accent text-black"
-                    : "border border-white/10 text-zinc-300 hover:bg-white/[.06]"
+                    ? "gradient-signature text-white"
+                    : "border border-border text-foreground-secondary hover:bg-white/[.06]"
                 }`}
               >
                 Monde
@@ -198,7 +200,7 @@ export default async function Home({
           )}
 
           {leaderboard.length === 0 ? (
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-foreground-secondary">
               Aucun coureur classé cette semaine pour le moment.
             </p>
           ) : (

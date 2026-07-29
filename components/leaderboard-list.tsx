@@ -33,16 +33,16 @@ export function LeaderboardList({ rows }: { rows: LeaderboardRowData[] }) {
 
   return (
     <>
-      <ol className="flex flex-col divide-y divide-white/10 rounded-md border border-white/10">
+      <ol className="flex flex-col divide-y divide-border rounded-2xl border border-border">
         {rows.map((row) => (
           <li
             key={row.userId}
             onClick={() => setOpenUserId(row.userId)}
-            className={`flex cursor-pointer items-center gap-3 px-4 py-3 text-sm ${
+            className={`flex cursor-pointer items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-white/[.04] ${
               row.highlightClass ?? (row.isMe ? "bg-white/[.06]" : "")
             }`}
           >
-            <span className="w-6 text-right text-zinc-400">{row.rank}</span>
+            <span className="w-6 text-right font-mono text-foreground-secondary">{row.rank}</span>
             <Avatar
               userId={row.userId}
               photoUrl={row.photoUrl}
@@ -52,7 +52,7 @@ export function LeaderboardList({ rows }: { rows: LeaderboardRowData[] }) {
             />
             {row.countryCode && <span aria-hidden>{getCountryFlag(row.countryCode)}</span>}
             <span className="min-w-0 flex-1">
-              <span className="font-medium text-white">
+              <span className="font-medium text-foreground">
                 <Link
                   href={`/profil/${row.userId}`}
                   onClick={(e) => e.stopPropagation()}
@@ -60,7 +60,7 @@ export function LeaderboardList({ rows }: { rows: LeaderboardRowData[] }) {
                 >
                   {formatDisplayName(row.displayName, row.firstname, row.lastname)}
                 </Link>
-                {row.isMe && <span className="text-zinc-400"> (toi)</span>}
+                {row.isMe && <span className="text-foreground-secondary"> (toi)</span>}
               </span>
               {row.titleLabel && <TitleBadge label={row.titleLabel} />}
               {row.streakDays != null && row.streakDays > 0 && (
@@ -69,7 +69,7 @@ export function LeaderboardList({ rows }: { rows: LeaderboardRowData[] }) {
                 </span>
               )}
             </span>
-            <span className="font-semibold text-white">{row.points} pts</span>
+            <span className="font-mono font-semibold text-foreground">{row.points} pts</span>
           </li>
         ))}
       </ol>
