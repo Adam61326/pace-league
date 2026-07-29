@@ -34,10 +34,10 @@ export function DeleteAccountForm() {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-md border border-red-500/20 bg-red-500/5 p-4">
+    <div className="flex flex-col gap-3 rounded-[10px] border border-alert/20 bg-alert/5 p-4">
       <div>
-        <h3 className="text-sm font-semibold text-red-300">Supprimer mon compte</h3>
-        <p className="mt-1 text-xs text-zinc-400">
+        <h3 className="text-sm font-semibold text-alert">Supprimer mon compte</h3>
+        <p className="mt-1 text-xs text-foreground-secondary">
           Action définitive : révoque l&apos;accès Strava et efface ton compte, tes activités, tes
           scores et les ligues privées que tu as créées. Impossible à annuler.
         </p>
@@ -48,18 +48,18 @@ export function DeleteAccountForm() {
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
           placeholder={`Tape ${CONFIRM_TEXT} pour confirmer`}
-          className="rounded-md border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-red-400 sm:w-64"
+          className="rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none placeholder:text-foreground-tertiary focus:border-alert sm:w-64"
         />
         <button
           type="button"
           onClick={handleDelete}
           disabled={confirmText !== CONFIRM_TEXT || loading}
-          className="flex h-10 shrink-0 items-center justify-center rounded-full bg-red-500/90 px-5 text-sm font-semibold text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-10 shrink-0 items-center justify-center rounded-full bg-alert px-5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? "Suppression…" : "Supprimer définitivement"}
         </button>
       </div>
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <p className="text-sm text-alert">{error}</p>}
     </div>
   );
 }

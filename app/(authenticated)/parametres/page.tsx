@@ -30,22 +30,22 @@ export default async function ParametresPage() {
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-10">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Paramètres</h1>
-          <p className="text-sm text-zinc-400">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Paramètres</h1>
+          <p className="text-sm text-foreground-secondary">
             Ton compte, tes données physiologiques et ta connexion Strava.
           </p>
         </div>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Compte</h2>
-          <div className="flex flex-col gap-2 rounded-md border border-white/10 p-4 text-sm">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Compte</h2>
+          <div className="flex flex-col gap-2 rounded-[10px] border border-border p-4 text-sm">
             <p>
-              <span className="text-zinc-400">E-mail : </span>
-              <span className="text-white">{user.email}</span>
+              <span className="text-foreground-secondary">E-mail : </span>
+              <span className="text-foreground">{user.email}</span>
             </p>
             <p>
-              <span className="text-zinc-400">Pays : </span>
-              <span className="text-white">
+              <span className="text-foreground-secondary">Pays : </span>
+              <span className="text-foreground">
                 {profile?.country_code ? getCountryName(profile.country_code) : "—"}
               </span>
             </p>
@@ -53,12 +53,12 @@ export default async function ParametresPage() {
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Identité</h2>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Identité</h2>
           <DisplayNameForm displayName={profile?.display_name ?? null} />
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">
             Profil physiologique
           </h2>
           <ProfileForm
@@ -72,16 +72,16 @@ export default async function ParametresPage() {
         </section>
 
         <section className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold tracking-tight text-zinc-400">Strava</h2>
-          <div className="flex items-center justify-between rounded-md border border-white/10 p-4 text-sm">
-            <span className="text-zinc-400">Statut</span>
-            <span className="text-white">{isStravaConnected ? "connecté" : "non connecté"}</span>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Strava</h2>
+          <div className="flex items-center justify-between rounded-[10px] border border-border p-4 text-sm">
+            <span className="text-foreground-secondary">Statut</span>
+            <span className="text-foreground">{isStravaConnected ? "connecté" : "non connecté"}</span>
           </div>
           <StravaActions isConnected={isStravaConnected} />
         </section>
 
-        <section className="flex flex-col gap-3 border-t border-white/10 pt-8">
-          <h2 className="text-xs font-semibold tracking-wide text-zinc-400 uppercase">
+        <section className="flex flex-col gap-3 border-t border-border pt-8">
+          <h2 className="text-xs font-semibold tracking-wide text-foreground-secondary uppercase">
             Zone dangereuse
           </h2>
           <DeleteAccountForm />
