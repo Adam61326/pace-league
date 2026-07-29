@@ -13,6 +13,7 @@ const PROTECTED_PATHS = [
   "/badges",
   "/profil",
   "/recherche",
+  "/historique",
 ];
 
 // Onboarding pays (Sprint 15) : une connexion Google n'a jamais de
