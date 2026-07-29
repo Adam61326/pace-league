@@ -1,4 +1,5 @@
 import { Avatar } from "@/components/avatar";
+import { ClubInvitationActions } from "@/components/club-invitation-actions";
 import { formatDisplayName } from "@/lib/display-name";
 import { getPendingInvitations } from "@/lib/club-invitations";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -6,7 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 import { IconMailForward, IconUsersGroup } from "@tabler/icons-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { InvitationActions } from "./invitation-actions";
 
 interface ClubMembershipRow {
   role: "admin" | "member";
@@ -100,7 +100,7 @@ export default async function ClubsPage() {
                         : "un admin"}
                     </p>
                   </div>
-                  <InvitationActions invitationId={invitation.id} />
+                  <ClubInvitationActions invitationId={invitation.id} />
                 </div>
               ))}
             </div>

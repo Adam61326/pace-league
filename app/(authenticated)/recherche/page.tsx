@@ -1,11 +1,12 @@
 import { Avatar } from "@/components/avatar";
+import { InviteToClubButton } from "@/components/invite-to-club-button";
 import { SearchInput } from "@/components/search-input";
 import { getCountryFlag, getSortedCountries } from "@/lib/countries";
 import { formatDisplayName } from "@/lib/display-name";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_TIER, TIER_META, type Tier } from "@/lib/tiers";
-import { IconMoodEmpty, IconSearch } from "@tabler/icons-react";
+import { IconMoodEmpty, IconSearch, IconUsersGroup } from "@tabler/icons-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -25,6 +26,13 @@ interface SearchResultUser {
 // .in() sur les codes pays dans la même expression de filtre PostgREST
 // obligerait à construire une chaîne fragile ; ici on fusionne simplement les
 // deux résultats par id.
+//
+// Mode contextuel "?club=<id>" (Sprint 18) : le Search tab existant sert
+// aussi à un admin de club pour inviter un coureur (CLAUDE.md "Clubs" —
+// rejoindre un club se fait UNIQUEMENT par invitation nominative, jamais par
+// code). Silencieusement ignoré si le paramètre ne correspond pas à un club
+// dont l'utilisateur courant est admin : la recherche normale reste
+// disponible plutôt que d'afficher une erreur.
 export default async function RecherchePage({
   searchParams,
 }: {
@@ -41,6 +49,36 @@ export default async function RecherchePage({
 
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim() : "";
+  const clubId = typeof params.club === "string" ? params.club : "";
+
+  let inviteClub: { id: string; name: string } | null = null;
+  let alreadyMemberIds = new Set<string>();
+  let alreadyInvitedIds = new Set<string>();
+
+  if (clubId) {
+    const { data: club } = await supabase.from("clubs").select("id, name").eq("id", clubId).maybeSingle();
+
+    if (club) {
+      const { data: membership } = await supabase
+        .from("club_members")
+        .select("role")
+        .eq("club_id", clubId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (membership?.role === "admin") {
+        inviteClub = club;
+
+        const [{ data: memberRows }, { data: invitationRows }] = await Promise.all([
+          supabase.from("club_members").select("user_id").eq("club_id", clubId),
+          supabase.from("club_invitations").select("invited_user_id").eq("club_id", clubId).eq("status", "pending"),
+        ]);
+
+        alreadyMemberIds = new Set((memberRows ?? []).map((r) => r.user_id));
+        alreadyInvitedIds = new Set((invitationRows ?? []).map((r) => r.invited_user_id));
+      }
+    }
+  }
 
   const admin = createAdminClient();
   let results: SearchResultUser[] = [];
@@ -91,26 +129,34 @@ export default async function RecherchePage({
   return (
     <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Recherche</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Recherche</h1>
+
+        {inviteClub && (
+          <div className="flex items-center gap-2 rounded-[10px] bg-accent/10 px-3.5 py-2.5 text-sm text-accent">
+            <IconUsersGroup size={16} stroke={1.75} />
+            Inviter dans <span className="font-semibold">{inviteClub.name}</span>
+          </div>
+        )}
+
         <SearchInput initialQuery={q} />
 
         {q === "" ? (
-          <div className="flex flex-col items-center gap-4 py-20 text-center text-zinc-500">
+          <div className="flex flex-col items-center gap-4 py-20 text-center text-foreground-tertiary">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-              <IconSearch size={28} className="text-zinc-600" />
+              <IconSearch size={28} className="text-foreground-tertiary" />
             </span>
             <div>
-              <p className="text-[15px] font-semibold text-zinc-300">Trouvez un coureur</p>
+              <p className="text-[15px] font-semibold text-foreground-secondary">Trouvez un coureur</p>
               <p className="text-sm">Recherchez par nom ou par pays</p>
             </div>
           </div>
         ) : results.length === 0 ? (
-          <div className="flex flex-col items-center gap-4 py-20 text-center text-zinc-500">
+          <div className="flex flex-col items-center gap-4 py-20 text-center text-foreground-tertiary">
             <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white/5">
-              <IconMoodEmpty size={28} className="text-zinc-600" />
+              <IconMoodEmpty size={28} className="text-foreground-tertiary" />
             </span>
             <div>
-              <p className="text-[15px] font-semibold text-zinc-300">Aucun coureur trouvé</p>
+              <p className="text-[15px] font-semibold text-foreground-secondary">Aucun coureur trouvé</p>
               <p className="text-sm">Aucun résultat pour « {q} »</p>
             </div>
           </div>
@@ -118,11 +164,50 @@ export default async function RecherchePage({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {results.map((row) => {
               const tier = tierByUser.get(row.id) ?? DEFAULT_TIER;
+              const profileLink = (
+                <Link href={`/profil/${row.id}`} className="min-w-0 flex-1">
+                  <p className="truncate text-[14.5px] font-semibold text-foreground">
+                    {formatDisplayName(row.display_name, row.strava_firstname, row.strava_lastname)}
+                  </p>
+                  <p className="flex items-center gap-2 text-xs text-foreground-secondary">
+                    {row.country_code && <span aria-hidden>{getCountryFlag(row.country_code)}</span>}
+                    <span>{TIER_META[tier].label}</span>
+                  </p>
+                </Link>
+              );
+
+              if (inviteClub) {
+                const isMember = alreadyMemberIds.has(row.id);
+                const isInvited = alreadyInvitedIds.has(row.id);
+                return (
+                  <div
+                    key={row.id}
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-white/[.02] p-3.5"
+                  >
+                    <Avatar
+                      userId={row.id}
+                      photoUrl={row.strava_profile_photo_url}
+                      firstname={row.strava_firstname}
+                      lastname={row.strava_lastname}
+                      size={44}
+                    />
+                    {profileLink}
+                    {isMember ? (
+                      <span className="shrink-0 text-xs text-foreground-tertiary">Déjà membre</span>
+                    ) : isInvited ? (
+                      <span className="shrink-0 text-xs text-foreground-tertiary">Invité en attente</span>
+                    ) : (
+                      <InviteToClubButton clubId={inviteClub.id} userId={row.id} />
+                    )}
+                  </div>
+                );
+              }
+
               return (
                 <Link
                   key={row.id}
                   href={`/profil/${row.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[.02] p-3.5 hover:border-white/25"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-white/[.02] p-3.5 hover:border-border-strong"
                 >
                   <Avatar
                     userId={row.id}
@@ -132,10 +217,10 @@ export default async function RecherchePage({
                     size={44}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[14.5px] font-semibold text-white">
+                    <p className="truncate text-[14.5px] font-semibold text-foreground">
                       {formatDisplayName(row.display_name, row.strava_firstname, row.strava_lastname)}
                     </p>
-                    <p className="flex items-center gap-2 text-xs text-zinc-400">
+                    <p className="flex items-center gap-2 text-xs text-foreground-secondary">
                       {row.country_code && <span aria-hidden>{getCountryFlag(row.country_code)}</span>}
                       <span>{TIER_META[tier].label}</span>
                     </p>

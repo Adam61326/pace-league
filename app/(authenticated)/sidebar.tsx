@@ -1,7 +1,9 @@
 "use client";
 
 import { Avatar } from "@/components/avatar";
+import { InvitationsBell } from "@/components/invitations-bell";
 import { Logo } from "@/components/logo";
+import type { PendingClubInvitation } from "@/lib/club-invitations";
 import {
   IconChevronDown,
   IconClipboardList,
@@ -186,6 +188,7 @@ export function Sidebar({
   photoUrl,
   name,
   email,
+  pendingInvitations,
 }: {
   userId: string;
   firstname: string | null;
@@ -193,6 +196,7 @@ export function Sidebar({
   photoUrl: string | null;
   name: string;
   email: string;
+  pendingInvitations: PendingClubInvitation[];
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -201,18 +205,21 @@ export function Sidebar({
 
   return (
     <>
-      {/* Barre mobile : logo + bouton menu, sidebar en overlay au clic */}
+      {/* Barre mobile : logo + cloche + bouton menu, sidebar en overlay au clic */}
       <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur md:hidden">
         <Link href="/">
           <Logo size="sm" />
         </Link>
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-[10px] text-foreground-secondary hover:bg-white/[.06] hover:text-foreground"
-        >
-          <IconMenu2 size={20} />
-        </button>
+        <div className="flex items-center gap-1">
+          <InvitationsBell invitations={pendingInvitations} />
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-foreground-secondary hover:bg-white/[.06] hover:text-foreground"
+          >
+            <IconMenu2 size={20} />
+          </button>
+        </div>
       </header>
 
       {mobileOpen && (
@@ -237,10 +244,11 @@ export function Sidebar({
 
       {/* Sidebar desktop, toujours visible */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-background md:flex">
-        <div className="flex h-16 items-center border-b border-border px-5">
+        <div className="flex h-16 items-center justify-between border-b border-border px-5">
           <Link href="/">
             <Logo size="sm" />
           </Link>
+          <InvitationsBell invitations={pendingInvitations} align="left" />
         </div>
         <NavContent pathname={pathname} />
         {userMenu}
