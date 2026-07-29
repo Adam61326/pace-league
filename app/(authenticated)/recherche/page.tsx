@@ -1,12 +1,13 @@
 import { Avatar } from "@/components/avatar";
 import { InviteToClubButton } from "@/components/invite-to-club-button";
+import { InviteToCoachButton } from "@/components/invite-to-coach-button";
 import { SearchInput } from "@/components/search-input";
 import { getCountryFlag, getSortedCountries } from "@/lib/countries";
 import { formatDisplayName } from "@/lib/display-name";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_TIER, TIER_META, type Tier } from "@/lib/tiers";
-import { IconMoodEmpty, IconSearch, IconUsersGroup } from "@tabler/icons-react";
+import { IconMoodEmpty, IconSearch, IconUserStar, IconUsersGroup } from "@tabler/icons-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -33,6 +34,12 @@ interface SearchResultUser {
 // code). Silencieusement ignoré si le paramètre ne correspond pas à un club
 // dont l'utilisateur courant est admin : la recherche normale reste
 // disponible plutôt que d'afficher une erreur.
+//
+// Mode contextuel "?coach=<id>" (Sprint 19) : même pattern pour inviter un
+// coureur en tant que coach — CLAUDE.md "Vue Coach". Contrairement aux
+// clubs, il n'y a pas d'entité séparée à vérifier : le seul id valide est
+// celui de l'utilisateur courant (on ne peut inviter qu'en son propre nom),
+// silencieusement ignoré sinon.
 export default async function RecherchePage({
   searchParams,
 }: {
@@ -50,6 +57,7 @@ export default async function RecherchePage({
   const params = await searchParams;
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const clubId = typeof params.club === "string" ? params.club : "";
+  const coachParam = typeof params.coach === "string" ? params.coach : "";
 
   let inviteClub: { id: string; name: string } | null = null;
   let alreadyMemberIds = new Set<string>();
@@ -78,6 +86,22 @@ export default async function RecherchePage({
         alreadyInvitedIds = new Set((invitationRows ?? []).map((r) => r.invited_user_id));
       }
     }
+  }
+
+  let inviteAsCoach = false;
+  let alreadyCoachedIds = new Set<string>();
+  let alreadyCoachInvitedIds = new Set<string>();
+
+  if (coachParam && coachParam === user.id) {
+    inviteAsCoach = true;
+
+    const [{ data: relationshipRows }, { data: coachInvitationRows }] = await Promise.all([
+      supabase.from("coach_relationships").select("athlete_id").eq("coach_id", user.id),
+      supabase.from("coach_invitations").select("invited_athlete_id").eq("coach_id", user.id).eq("status", "pending"),
+    ]);
+
+    alreadyCoachedIds = new Set((relationshipRows ?? []).map((r) => r.athlete_id));
+    alreadyCoachInvitedIds = new Set((coachInvitationRows ?? []).map((r) => r.invited_athlete_id));
   }
 
   const admin = createAdminClient();
@@ -135,6 +159,13 @@ export default async function RecherchePage({
           <div className="flex items-center gap-2 rounded-[10px] bg-accent/10 px-3.5 py-2.5 text-sm text-accent">
             <IconUsersGroup size={16} stroke={1.75} />
             Inviter dans <span className="font-semibold">{inviteClub.name}</span>
+          </div>
+        )}
+
+        {inviteAsCoach && (
+          <div className="flex items-center gap-2 rounded-[10px] bg-accent/10 px-3.5 py-2.5 text-sm text-accent">
+            <IconUserStar size={16} stroke={1.75} />
+            Inviter un coureur en tant que <span className="font-semibold">coach</span>
           </div>
         )}
 
@@ -198,6 +229,34 @@ export default async function RecherchePage({
                       <span className="shrink-0 text-xs text-foreground-tertiary">Invité en attente</span>
                     ) : (
                       <InviteToClubButton clubId={inviteClub.id} userId={row.id} />
+                    )}
+                  </div>
+                );
+              }
+
+              if (inviteAsCoach) {
+                if (row.id === user.id) return null; // pas de bouton pour s'auto-inviter
+                const isCoached = alreadyCoachedIds.has(row.id);
+                const isInvited = alreadyCoachInvitedIds.has(row.id);
+                return (
+                  <div
+                    key={row.id}
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-white/[.02] p-3.5"
+                  >
+                    <Avatar
+                      userId={row.id}
+                      photoUrl={row.strava_profile_photo_url}
+                      firstname={row.strava_firstname}
+                      lastname={row.strava_lastname}
+                      size={44}
+                    />
+                    {profileLink}
+                    {isCoached ? (
+                      <span className="shrink-0 text-xs text-foreground-tertiary">Déjà coaché</span>
+                    ) : isInvited ? (
+                      <span className="shrink-0 text-xs text-foreground-tertiary">Invité en attente</span>
+                    ) : (
+                      <InviteToCoachButton athleteId={row.id} />
                     )}
                   </div>
                 );

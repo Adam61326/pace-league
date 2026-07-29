@@ -4,6 +4,7 @@ import { Avatar } from "@/components/avatar";
 import { InvitationsBell } from "@/components/invitations-bell";
 import { Logo } from "@/components/logo";
 import type { PendingClubInvitation } from "@/lib/club-invitations";
+import type { PendingCoachInvitation } from "@/lib/coach";
 import {
   IconChevronDown,
   IconClipboardList,
@@ -188,7 +189,8 @@ export function Sidebar({
   photoUrl,
   name,
   email,
-  pendingInvitations,
+  pendingClubInvitations,
+  pendingCoachInvitations,
 }: {
   userId: string;
   firstname: string | null;
@@ -196,7 +198,8 @@ export function Sidebar({
   photoUrl: string | null;
   name: string;
   email: string;
-  pendingInvitations: PendingClubInvitation[];
+  pendingClubInvitations: PendingClubInvitation[];
+  pendingCoachInvitations: PendingCoachInvitation[];
 }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -211,7 +214,7 @@ export function Sidebar({
           <Logo size="sm" />
         </Link>
         <div className="flex items-center gap-1">
-          <InvitationsBell invitations={pendingInvitations} />
+          <InvitationsBell clubInvitations={pendingClubInvitations} coachInvitations={pendingCoachInvitations} />
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -248,7 +251,11 @@ export function Sidebar({
           <Link href="/">
             <Logo size="sm" />
           </Link>
-          <InvitationsBell invitations={pendingInvitations} align="left" />
+          <InvitationsBell
+            clubInvitations={pendingClubInvitations}
+            coachInvitations={pendingCoachInvitations}
+            align="left"
+          />
         </div>
         <NavContent pathname={pathname} />
         {userMenu}
