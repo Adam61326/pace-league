@@ -127,7 +127,7 @@ export default async function LiguesPage({
                       {row.active_runners_count} coureur{row.active_runners_count > 1 ? "s" : ""}
                     </span>
                     <span className="w-20 text-right font-semibold text-white">
-                      {row.total_points} pts
+                      {Number(row.total_points).toFixed(1)} pts
                     </span>
                   </li>
                 );

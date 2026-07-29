@@ -414,7 +414,7 @@ export default async function DashboardPage({
                     +{(rival.week_points - myWeekPoints).toFixed(1)} pts à combler
                   </span>
                   <span className="w-16 text-right font-mono font-semibold text-foreground">
-                    {rival.week_points} pts
+                    {Number(rival.week_points).toFixed(1)} pts
                   </span>
                 </div>
               ))}
@@ -428,7 +428,7 @@ export default async function DashboardPage({
                 />
                 <span className="flex-1 font-medium text-foreground">Toi</span>
                 <span className="w-16 text-right font-mono font-semibold text-foreground">
-                  {myWeekPoints} pts
+                  {Number(myWeekPoints).toFixed(1)} pts
                 </span>
               </div>
               {rivalsBelow.map((rival) => (
@@ -447,7 +447,7 @@ export default async function DashboardPage({
                     {(myWeekPoints - rival.week_points).toFixed(1)} pts d&apos;avance
                   </span>
                   <span className="w-16 text-right font-mono font-semibold text-foreground">
-                    {rival.week_points} pts
+                    {Number(rival.week_points).toFixed(1)} pts
                   </span>
                 </div>
               ))}

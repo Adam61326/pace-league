@@ -69,7 +69,7 @@ export function LeaderboardList({ rows }: { rows: LeaderboardRowData[] }) {
                 </span>
               )}
             </span>
-            <span className="font-mono font-semibold text-foreground">{row.points} pts</span>
+            <span className="font-mono font-semibold text-foreground">{Number(row.points).toFixed(1)} pts</span>
           </li>
         ))}
       </ol>
