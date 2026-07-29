@@ -1,3 +1,4 @@
+import { promoteReplacementAdmins } from "@/lib/clubs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { getValidAccessToken } from "@/lib/strava";
@@ -7,11 +8,13 @@ const STRAVA_DEAUTHORIZE_URL = "https://www.strava.com/oauth/deauthorize";
 
 // Suppression définitive du compte (bouton "Supprimer mon compte" sur
 // /parametres). Révoque Strava en best-effort (même logique que
-// /api/strava/disconnect), puis supprime le compte auth.users via l'API
-// admin Supabase : public.users (et tout ce qui en dépend — activities,
-// weekly_scores, best_efforts, league_members, leagues créées par cet
-// utilisateur) est nettoyé automatiquement par les FK "on delete cascade"
-// posées dès le schéma initial, pas de suppression manuelle table par table.
+// /api/strava/disconnect), promeut un remplaçant sur les clubs dont
+// l'utilisateur est admin (voir lib/clubs.ts — best-effort aussi, jamais
+// bloquant), puis supprime le compte auth.users via l'API admin Supabase :
+// public.users (et tout ce qui en dépend — activities, weekly_scores,
+// best_efforts, league_members, leagues/clubs créés par cet utilisateur) est
+// nettoyé automatiquement par les FK "on delete cascade" posées dès le
+// schéma initial, pas de suppression manuelle table par table.
 export async function POST() {
   const supabase = await createClient();
   const {
@@ -48,6 +51,17 @@ export async function POST() {
     } catch (err) {
       console.error("account delete: strava revocation failed", user.id, err);
     }
+  }
+
+  // Doit s'exécuter avant la suppression du compte : une fois auth.users
+  // supprimé, la ligne club_members de cet utilisateur disparaît en cascade
+  // (impossible de savoir après coup de quels clubs il était admin).
+  // Best-effort comme la révocation Strava ci-dessus : la suppression de
+  // compte ne doit jamais être bloquée par cette étape.
+  try {
+    await promoteReplacementAdmins(admin, user.id);
+  } catch (err) {
+    console.error("account delete: club admin promotion failed", user.id, err);
   }
 
   const { error } = await admin.auth.admin.deleteUser(user.id);
