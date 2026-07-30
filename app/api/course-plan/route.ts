@@ -1,9 +1,7 @@
 import type { SplitElevation } from "@/lib/gpx";
-import { computeRacePlanSplits, type PaceStrategy } from "@/lib/race-plan";
+import { computeRacePlanSplits, PACE_STRATEGY_MAX, PACE_STRATEGY_MIN, type PaceStrategy } from "@/lib/race-plan";
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse, type NextRequest } from "next/server";
-
-const PACE_STRATEGIES: PaceStrategy[] = ["positive", "even", "negative"];
 
 function toNullableString(value: unknown): string | null {
   if (typeof value !== "string" || value.trim() === "") return null;
@@ -22,7 +20,9 @@ function toNullableNonNegativeNumber(value: unknown): number | null {
 }
 
 function toPaceStrategy(value: unknown): PaceStrategy {
-  return PACE_STRATEGIES.includes(value as PaceStrategy) ? (value as PaceStrategy) : "even";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(PACE_STRATEGY_MAX, Math.max(PACE_STRATEGY_MIN, n));
 }
 
 // Le client envoie les mêmes clés camelCase que SplitElevation

@@ -4,6 +4,12 @@
    de bascule clair/sombre selon les préférences système — c'est l'identité
    de marque, pas un thème adaptatif. */
 :root {
+  /* Sans ça, les contrôles natifs (popup des <select>, anneau de focus,
+     scrollbars) suivent le thème clair/sombre du navigateur/OS — sur un OS en
+     mode clair, ça donne un popup d'options blanc avec notre texte clair
+     hérité (illisible), et sur Windows un anneau de focus dans la couleur
+     d'accent système (souvent orange) autour des <select> non stylés. */
+  color-scheme: dark;
   --background: #09090b;
   --foreground: #fafafa;
   --foreground-secondary: #94a3b8;

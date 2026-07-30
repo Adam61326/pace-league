@@ -7,17 +7,6 @@ import { getRacePlanForRace, getRacesForUser } from "@/lib/race-plan";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-function formatPace(secPerKm: number): string {
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
-  return `${min}:${String(sec).padStart(2, "0")} /km`;
-}
-
-function formatSplitElevation(gainM: number | null, lossM: number | null): string {
-  if (gainM == null && lossM == null) return "–";
-  return `+${gainM ?? 0} / -${lossM ?? 0} m`;
-}
-
 // Plusieurs courses en préparation en parallèle (CLAUDE.md "CHANGEMENT DE
 // SCOPE ASSUMÉ", Sprint 20) — remplace la contrainte "un seul plan actif
 // par utilisateur" du sprint précédent (20260801000000_add_race_plan.sql).
@@ -78,42 +67,7 @@ export default async function PlanEntrainementPage({ searchParams }: { searchPar
             />
 
             {result && result.splits.length > 0 && (
-              <>
-                <section className="flex flex-col gap-4">
-                  <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Splits</h2>
-                  <div className="overflow-x-auto rounded-2xl border border-border">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-white/[.02] text-left text-xs font-semibold text-foreground-tertiary uppercase">
-                          <th className="px-4 py-2.5">Lap</th>
-                          <th className="px-4 py-2.5">Distance</th>
-                          <th className="px-4 py-2.5">D+/D-</th>
-                          <th className="px-4 py-2.5">Allure cible</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {result.splits.map((split) => (
-                          <tr key={split.lapNumber}>
-                            <td className="px-4 py-2.5 text-foreground">
-                              {split.lapNumber}
-                              {split.isFinishLap && <span className="ml-2 text-xs text-foreground-tertiary">Arrivée</span>}
-                            </td>
-                            <td className="px-4 py-2.5 text-foreground-secondary">{split.distanceKm.toFixed(2)} km</td>
-                            <td className="px-4 py-2.5 text-foreground-secondary">
-                              {formatSplitElevation(split.elevationGainM, split.elevationLossM)}
-                            </td>
-                            <td className="px-4 py-2.5 font-mono text-foreground-secondary">
-                              {formatPace(split.targetPaceSecPerKm)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                <SendToWatch racePlanId={result.plan.id} fullLapsCount={fullLapsCount} hasFinishLap={hasFinishLap} />
-              </>
+              <SendToWatch racePlanId={result.plan.id} fullLapsCount={fullLapsCount} hasFinishLap={hasFinishLap} />
             )}
           </>
         )}

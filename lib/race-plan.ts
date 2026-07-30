@@ -8,7 +8,26 @@ export const LAP_DISTANCE_KM = 1;
 
 export const SPLIT_DISTANCE_PRESETS = [1, 2, 5, 10] as const;
 
-export type PaceStrategy = "positive" | "even" | "negative";
+// Intensité de la dérive d'allure, en continu de -1 (très positif, départ le
+// plus rapide) à +1 (très négatif, fin la plus rapide), 0 = régulier.
+// Remplace l'ancien enum à 3 valeurs ('positive' | 'even' | 'negative') pour
+// permettre un curseur à 5 crans — voir PACE_STRATEGY_LEVELS et la migration
+// 20260803000000_pace_strategy_numeric.sql. Les anciens crans "positif"/
+// "négatif" correspondent exactement à ±0.5 (voir computeStrategyDeltaSecPerKm)
+// pour ne pas changer l'allure déjà calculée des plans existants.
+export type PaceStrategy = number;
+
+export const PACE_STRATEGY_MIN = -1;
+export const PACE_STRATEGY_MAX = 1;
+export const PACE_STRATEGY_STEP = 0.5;
+
+export const PACE_STRATEGY_LEVELS: { value: PaceStrategy; label: string }[] = [
+  { value: -1, label: "Allure très positive" },
+  { value: -0.5, label: "Allure positive" },
+  { value: 0, label: "Allure régulière" },
+  { value: 0.5, label: "Allure négative" },
+  { value: 1, label: "Allure très négative" },
+];
 
 export interface DistancePreset {
   key: string;
@@ -27,12 +46,14 @@ export const DISTANCE_PRESETS: DistancePreset[] = [
   { key: "other", label: "Autre", distanceKm: null },
 ];
 
-// Dérive totale (premier → dernier split), en % de l'allure moyenne demandée
-// — pic-à-pic (ex: 10% => premier split à -5%, dernier à +5% pour la
-// stratégie "positive"). Valeur par défaut raisonnable non spécifiée dans la
-// demande d'origine (contrairement au relief, voir ci-dessous) : à ajuster
-// si le retour terrain la juge trop marquée ou trop plate.
-const STRATEGY_SWING_PCT = 10;
+// Dérive totale à intensité maximale (±1, "très positif"/"très négatif"),
+// en % de l'allure moyenne demandée, pic-à-pic. À intensité ±0.5 (anciens
+// crans "positif"/"négatif"), la dérive vaut donc 10% pic-à-pic — inchangé
+// par rapport à l'ancien enum, voir computeStrategyDeltaSecPerKm. Valeur par
+// défaut raisonnable non spécifiée dans la demande d'origine (contrairement
+// au relief, voir ci-dessous) : à ajuster si le retour terrain la juge trop
+// marquée ou trop plate.
+const PACE_STRATEGY_MAX_SWING_PCT = 20;
 
 // Ajustement relief — formule confirmée explicitement avant implémentation
 // (voir échange de validation) : pénalité montée ~2.3x plus forte que le
@@ -90,13 +111,19 @@ function computeSplitDistances(distanceKm: number, splitDistanceKm: number): { d
   return laps;
 }
 
-function computeStrategyDeltaSecPerKm(basePaceSecPerKm: number, strategy: PaceStrategy, index: number, total: number): number {
-  if (strategy === "even" || total <= 1) return 0;
-  const swingSecPerKm = basePaceSecPerKm * (STRATEGY_SWING_PCT / 100);
+// intensity < 0 = allure "positive" (départ rapide, fin lente) ; intensity >
+// 0 = allure "négative" (départ lent, fin rapide) ; magnitude proportionnelle
+// à |intensity|. Le signe négatif devant `intensity` fait que le premier
+// split (linear = -0.5) reçoit un delta du signe opposé à intensity : une
+// intensity négative ("positif") donne un delta négatif au premier split
+// (plus rapide), cohérent avec le sens du curseur POSITIF (gauche, valeurs
+// négatives) → NÉGATIF (droite, valeurs positives).
+function computeStrategyDeltaSecPerKm(basePaceSecPerKm: number, intensity: PaceStrategy, index: number, total: number): number {
+  if (intensity === 0 || total <= 1) return 0;
+  const swingSecPerKm = basePaceSecPerKm * (PACE_STRATEGY_MAX_SWING_PCT / 100);
   const t = index / (total - 1); // 0 (premier split) .. 1 (dernier split)
   const linear = t - 0.5; // -0.5 .. 0.5
-  const sign = strategy === "positive" ? 1 : -1;
-  return sign * linear * swingSecPerKm;
+  return -intensity * linear * swingSecPerKm;
 }
 
 function computeReliefDeltaSecPerKm(basePaceSecPerKm: number, splitDistanceKm: number, elevation: SplitElevation): number {
@@ -125,7 +152,7 @@ export function computeRacePlanSplits(
   } = {}
 ): RacePlanSplit[] {
   const splitDistanceKm = options.splitDistanceKm ?? LAP_DISTANCE_KM;
-  const paceStrategy = options.paceStrategy ?? "even";
+  const paceStrategy = options.paceStrategy ?? 0;
   const laps = computeSplitDistances(distanceKm, splitDistanceKm);
 
   return laps.map((lap, index) => {
@@ -197,7 +224,7 @@ function toRacePlan(row: RacePlanRow): RacePlan {
     targetPaceSecPerKm: Number(row.target_pace_sec_per_km),
     elevationGainM: row.elevation_gain_m != null ? Number(row.elevation_gain_m) : null,
     elevationLossM: row.elevation_loss_m != null ? Number(row.elevation_loss_m) : null,
-    paceStrategy: row.pace_strategy,
+    paceStrategy: Number(row.pace_strategy),
     gpxFilename: row.gpx_filename,
     splitDistanceKm: Number(row.split_distance_km),
   };
