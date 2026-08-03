@@ -2,7 +2,7 @@ import { ActivateRaceButton } from "@/components/activate-race-button";
 import { RaceList } from "@/components/race-list";
 import { RacePlanForm } from "@/components/race-plan-form";
 import { SendToWatch } from "@/components/send-to-watch";
-import { formatDistanceKm, formatRaceDate } from "@/lib/format";
+import { formatRaceDate } from "@/lib/format";
 import { getRacePlanForRace, getRacesForUser } from "@/lib/race-plan";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -35,8 +35,8 @@ export default async function PlanEntrainementPage({ searchParams }: { searchPar
   const hasFinishLap = result ? result.splits.some((s) => s.isFinishLap) : false;
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-8 bg-background px-6 py-16">
-      <div className="flex w-full max-w-2xl flex-col gap-8">
+    <div className="flex flex-1 flex-col gap-8 bg-background px-6 py-16">
+      <div className="flex w-full flex-col gap-8">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">Entraînement</h1>
           <p className="text-sm text-foreground-secondary">
@@ -47,29 +47,22 @@ export default async function PlanEntrainementPage({ searchParams }: { searchPar
         <RaceList races={races} selectedRaceId={selectedRace?.id ?? null} />
 
         {selectedRace && (
-          <>
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">{selectedRace.name}</h2>
-                <p className="text-xs text-foreground-tertiary">
-                  {formatRaceDate(selectedRace.raceDate) ?? "Date non renseignée"} · {formatDistanceKm(selectedRace.distanceKm)}
-                </p>
-              </div>
-              {!selectedRace.isActive && <ActivateRaceButton raceId={selectedRace.id} />}
-            </div>
-
+          <div className="flex flex-col gap-8">
             <RacePlanForm
               key={selectedRace.id}
               raceId={selectedRace.id}
+              raceName={selectedRace.name}
+              raceDateLabel={formatRaceDate(selectedRace.raceDate)}
               defaultDistanceKm={selectedRace.distanceKm}
               initialPlan={result?.plan ?? null}
               initialSplits={result?.splits ?? []}
+              activateButton={!selectedRace.isActive ? <ActivateRaceButton raceId={selectedRace.id} /> : undefined}
             />
 
             {result && result.splits.length > 0 && (
               <SendToWatch racePlanId={result.plan.id} fullLapsCount={fullLapsCount} hasFinishLap={hasFinishLap} />
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

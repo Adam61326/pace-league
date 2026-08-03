@@ -1,9 +1,10 @@
 "use client";
 
-import { computeSplitElevations, parseGpxTrackPoints, type GpxPoint, type SplitElevation } from "@/lib/gpx";
+import { computeGpxSummary, computeSplitElevations, parseGpxTrackPoints, type GpxPoint, type SplitElevation } from "@/lib/gpx";
 import {
   computeRacePlanSplits,
   DISTANCE_PRESETS,
+  matchDistancePresetKey,
   PACE_STRATEGY_LEVELS,
   PACE_STRATEGY_MAX,
   PACE_STRATEGY_MIN,
@@ -13,9 +14,12 @@ import {
   type RacePlan,
   type RacePlanSplit,
 } from "@/lib/race-plan";
-import { IconChevronDown, IconTrash, IconUpload } from "@tabler/icons-react";
+import { OPTION_CLASS, SELECT_CLASS, SelectChevron } from "@/components/select-field";
+import { PaceInput } from "@/components/pace-input";
+import { formatDistanceKm, formatDuration } from "@/lib/format";
+import { IconDeviceFloppy, IconMessage, IconMountain, IconPencil } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 function secPerKmToMinSec(secPerKm: number | null): { min: string; sec: string } {
   if (secPerKm == null) return { min: "", sec: "" };
@@ -24,53 +28,55 @@ function secPerKmToMinSec(secPerKm: number | null): { min: string; sec: string }
   return { min: String(min), sec: String(sec).padStart(2, "0") };
 }
 
-function matchDistancePresetKey(distanceKm: number | null): string {
-  if (distanceKm == null) return "other";
-  const preset = DISTANCE_PRESETS.find((p) => p.distanceKm != null && Math.abs(p.distanceKm - distanceKm) < 0.005);
-  return preset?.key ?? "other";
-}
-
 function formatPace(secPerKm: number): string {
   const min = Math.floor(secPerKm / 60);
   const sec = Math.round(secPerKm % 60);
   return `${min}:${String(sec).padStart(2, "0")} /km`;
 }
 
+function formatPaceCompact(secPerKm: number): string {
+  const min = Math.floor(secPerKm / 60);
+  const sec = Math.round(secPerKm % 60);
+  return `${min}:${String(sec).padStart(2, "0")}/km`;
+}
+
 function paceStrategyLabel(value: PaceStrategy): string {
   return PACE_STRATEGY_LEVELS.find((l) => l.value === value)?.label ?? "Allure régulière";
 }
 
-const SPLIT_MODE_FULL = "full";
+// Code couleur du tableau de splits : compare l'allure finale affichée
+// (stratégie + relief déjà appliqués) à l'allure moyenne cible du plan, pas
+// à la cause de l'écart — un split peut être coloré grâce au relief
+// (descente) même stratégie "régulière", ou à cause de la stratégie seule.
+// Tolérance ±1 sec/km pour ne pas colorer du bruit d'arrondi négligeable.
+// Plus rapide = accent (même bleu que la colonne Cumul), plus lent = rouge.
+const PACE_COLOR_TOLERANCE_SEC = 1;
 
-// Style commun aux <select> de ce formulaire : `appearance-none` +
-// `color-scheme: dark` global (globals.css) — sans ça, sur un OS/navigateur
-// en thème clair, le popup natif d'options peut s'afficher en clair alors
-// que notre texte hérite d'une couleur claire pensée pour un fond sombre
-// (illisible), et Windows dessine un anneau de focus dans la couleur
-// d'accent système (souvent orange) autour d'un <select> non stylé.
-const SELECT_CLASS =
-  "w-full appearance-none rounded-[10px] border border-border bg-white/5 px-3 py-2 pr-8 text-sm text-foreground outline-none focus:border-accent";
-const OPTION_CLASS = "bg-surface text-foreground";
-
-function SelectChevron() {
-  return (
-    <IconChevronDown
-      size={16}
-      className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-tertiary"
-    />
-  );
+function paceColorClass(splitPaceSecPerKm: number, basePaceSecPerKm: number): string {
+  const diff = splitPaceSecPerKm - basePaceSecPerKm;
+  if (diff < -PACE_COLOR_TOLERANCE_SEC) return "text-accent";
+  if (diff > PACE_COLOR_TOLERANCE_SEC) return "text-red-400";
+  return "text-foreground-secondary";
 }
+
+const SPLIT_MODE_FULL = "full";
 
 export function RacePlanForm({
   raceId,
+  raceName,
+  raceDateLabel,
   defaultDistanceKm,
   initialPlan,
   initialSplits,
+  activateButton,
 }: {
   raceId: string;
+  raceName: string;
+  raceDateLabel: string | null;
   defaultDistanceKm: number;
   initialPlan: RacePlan | null;
   initialSplits: RacePlanSplit[];
+  activateButton?: React.ReactNode;
 }) {
   const router = useRouter();
   const initialPace = secPerKmToMinSec(initialPlan?.targetPaceSecPerKm ?? null);
@@ -101,6 +107,7 @@ export function RacePlanForm({
     initialPlan?.elevationLossM != null ? String(initialPlan.elevationLossM) : ""
   );
   const [paceStrategy, setPaceStrategy] = useState<PaceStrategy>(initialPlan?.paceStrategy ?? 0);
+  const [reliefEnabled, setReliefEnabled] = useState(initialPlan?.reliefEnabled ?? true);
 
   const [gpxFilename, setGpxFilename] = useState<string | null>(initialPlan?.gpxFilename ?? null);
   const [gpxPoints, setGpxPoints] = useState<GpxPoint[]>([]);
@@ -110,6 +117,20 @@ export function RacePlanForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // id du race_plan persisté — connu dès l'ouverture d'un plan déjà
+  // enregistré, ou capturé depuis la réponse du premier enregistrement
+  // (voir handleSubmit) : les commentaires par split ont besoin de cet id,
+  // impossible d'en poser un avant que le plan existe en base.
+  const [racePlanId, setRacePlanId] = useState<string | null>(initialPlan?.id ?? null);
+  const [comments, setComments] = useState<Record<number, string>>(() => {
+    const initial: Record<number, string> = {};
+    for (const s of initialSplits) if (s.comment) initial[s.lapNumber] = s.comment;
+    return initial;
+  });
+  const [editingLap, setEditingLap] = useState<number | null>(null);
+  const [commentDraft, setCommentDraft] = useState("");
+  const [commentSaving, setCommentSaving] = useState(false);
+
   const distanceKmNumber = Number(distanceKm) || 0;
   const splitDistanceKmNumber = splitMode === SPLIT_MODE_FULL ? distanceKmNumber || 1 : Number(splitMode);
   const targetPaceSecPerKmNumber = (Number(paceMin) || 0) * 60 + (Number(paceSec) || 0);
@@ -117,6 +138,11 @@ export function RacePlanForm({
 
   const distanceChangedSinceSave = initialPlan != null && Math.abs(distanceKmNumber - initialPlan.distanceKm) > 0.0005;
   const splitModeChangedSinceSave = initialPlan != null && Math.abs(splitDistanceKmNumber - initialPlan.splitDistanceKm) > 0.0005;
+
+  // Résumé de la trace importée (distance/D+/D- du fichier, pas du plan) —
+  // affiché sous le nom du fichier une fois importé cette session ; sans
+  // stockage du fichier brut, indisponible tant qu'on n'a pas ré-importé.
+  const gpxSummary = useMemo(() => (gpxPoints.length > 0 ? computeGpxSummary(gpxPoints) : null), [gpxPoints]);
 
   // Recalculé depuis les points GPX bruts (jamais depuis un état figé) pour
   // rester aligné si distance ou splits-par changent après l'import — voir
@@ -155,8 +181,56 @@ export function RacePlanForm({
       splitDistanceKm: splitDistanceKmNumber,
       paceStrategy,
       splitElevations: effectiveSplitElevations ?? undefined,
+      reliefEnabled,
     });
-  }, [distanceKmNumber, targetPaceSecPerKmNumber, splitDistanceKmNumber, paceStrategy, effectiveSplitElevations]);
+  }, [distanceKmNumber, targetPaceSecPerKmNumber, splitDistanceKmNumber, paceStrategy, effectiveSplitElevations, reliefEnabled]);
+
+  // POINT/SEGMENT/CUMUL du tableau : distance et temps cumulés depuis le
+  // départ, dérivés de previewSplits (jamais stockés séparément — le temps
+  // d'un segment = sa distance × son allure déjà calculée).
+  const splitsWithCumulative = useMemo(() => {
+    if (!previewSplits) return null;
+    let cumulativeDistanceKm = 0;
+    let cumulativeSeconds = 0;
+    return previewSplits.map((split) => {
+      cumulativeDistanceKm += split.distanceKm;
+      const segmentSeconds = split.distanceKm * split.targetPaceSecPerKm;
+      cumulativeSeconds += segmentSeconds;
+      return { ...split, cumulativeDistanceKm, segmentSeconds, cumulativeSeconds };
+    });
+  }, [previewSplits]);
+
+  function handleToggleCommentEditor(lapNumber: number) {
+    if (editingLap === lapNumber) {
+      setEditingLap(null);
+      return;
+    }
+    setEditingLap(lapNumber);
+    setCommentDraft(comments[lapNumber] ?? "");
+  }
+
+  async function handleSaveComment(lapNumber: number) {
+    if (!racePlanId) return;
+    setCommentSaving(true);
+
+    const response = await fetch(`/api/course-plan/${racePlanId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lap_number: lapNumber, comment: commentDraft }),
+    });
+
+    setCommentSaving(false);
+    if (!response.ok) return;
+
+    setComments((prev) => {
+      const next = { ...prev };
+      const trimmed = commentDraft.trim();
+      if (trimmed) next[lapNumber] = trimmed;
+      else delete next[lapNumber];
+      return next;
+    });
+    setEditingLap(null);
+  }
 
   async function handleGpxFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -226,6 +300,7 @@ export function RacePlanForm({
         gpx_filename: gpxCleared ? null : gpxFilename,
         split_distance_km: splitDistanceKmNumber,
         split_elevations: effectiveSplitElevations,
+        relief_enabled: reliefEnabled,
       }),
     });
 
@@ -236,37 +311,56 @@ export function RacePlanForm({
       return;
     }
 
+    const data: { id: string } = await response.json();
+    setRacePlanId(data.id);
     router.refresh();
   }
 
   return (
     <>
       <form onSubmit={handleSubmit} className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">Modifier le plan de course</h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-xs font-semibold tracking-wide text-foreground-secondary uppercase">
+            <IconPencil size={14} className="text-accent" stroke={1.75} />
+            <span>
+              Modifier le plan de course · {raceName}
+              {raceDateLabel && <> · {raceDateLabel}</>}
+            </span>
+          </div>
+          {activateButton}
+        </div>
 
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold tracking-wide text-foreground-tertiary uppercase">Parcours (.gpx)</p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold tracking-wide text-foreground-tertiary uppercase">Parcours (.gpx)</p>
+            {gpxFilename && !gpxCleared && (
+              <button
+                type="button"
+                onClick={handleRemoveGpx}
+                className="text-xs font-semibold uppercase tracking-wide text-accent hover:opacity-80"
+              >
+                Retirer
+              </button>
+            )}
+          </div>
           {gpxFilename && !gpxCleared ? (
-            <div className="flex items-center justify-between rounded-[10px] border border-dashed border-border bg-white/[.02] px-4 py-3">
+            <div className="flex items-center gap-3 rounded-[10px] border border-dashed border-border bg-white/[.02] px-4 py-3">
+              <IconMountain size={20} className="shrink-0 text-accent" stroke={1.75} />
               <div className="flex flex-col">
-                <span className="text-sm text-foreground">{gpxFilename}</span>
-                <span className="text-xs text-foreground-tertiary">Le D+/D- est analysé pour ajuster les allures de chaque split.</span>
+                <span className="text-sm font-semibold text-foreground">{gpxFilename}</span>
+                <span className="text-xs text-foreground-tertiary">
+                  {gpxSummary
+                    ? `${gpxSummary.distanceKm.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} km · D+ ${gpxSummary.elevationGainM} m · D- -${gpxSummary.elevationLossM} m`
+                    : "Le D+/D- est analysé pour ajuster les allures de chaque split."}
+                </span>
                 {staleGpxWithoutReimport && (
                   <span className="text-xs text-alert">Distance ou découpage modifiés — réimporte le GPX pour recalculer le D+/D-.</span>
                 )}
               </div>
-              <button
-                type="button"
-                onClick={handleRemoveGpx}
-                className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground-secondary transition-colors hover:bg-white/[.06]"
-              >
-                <IconTrash size={14} />
-                Retirer
-              </button>
             </div>
           ) : (
             <label className="flex cursor-pointer flex-col items-center gap-2 rounded-[10px] border border-dashed border-border bg-white/[.02] px-4 py-6 text-center transition-colors hover:border-accent">
-              <IconUpload size={20} className="text-foreground-tertiary" stroke={1.75} />
+              <IconMountain size={20} className="text-foreground-tertiary" stroke={1.75} />
               <span className="text-sm font-medium text-foreground">Importer la trace de la course</span>
               <span className="text-xs text-foreground-tertiary">Le D+/D- est analysé pour ajuster les allures de chaque split.</span>
               <input type="file" accept=".gpx" onChange={handleGpxFileChange} className="hidden" />
@@ -275,32 +369,32 @@ export function RacePlanForm({
           {gpxError && <p className="text-xs text-alert">{gpxError}</p>}
         </div>
 
+        <div className="flex items-center justify-between gap-3 rounded-[10px] border border-border bg-white/[.02] p-4">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-xs font-semibold tracking-wide text-foreground-tertiary uppercase">Impact du D+/D- sur le chrono</p>
+            <span className="text-xs text-foreground-secondary">
+              {reliefEnabled ? "Les allures cibles tiennent compte du relief." : "Allure cible identique quel que soit le relief."}
+            </span>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={reliefEnabled}
+            onClick={() => setReliefEnabled((v) => !v)}
+            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${reliefEnabled ? "bg-accent" : "bg-white/15"}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                reliefEnabled ? "translate-x-[20px]" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-foreground-secondary">Allure cible (min:sec / km)</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                required
-                min={0}
-                max={59}
-                aria-label="Minutes par km"
-                value={paceMin}
-                onChange={(e) => setPaceMin(e.target.value)}
-                className="w-full rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
-              />
-              <span className="text-foreground-tertiary">:</span>
-              <input
-                type="number"
-                required
-                min={0}
-                max={59}
-                aria-label="Secondes par km"
-                value={paceSec}
-                onChange={(e) => setPaceSec(e.target.value)}
-                className="w-full rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
-              />
-            </div>
+            <PaceInput minValue={paceMin} secValue={paceSec} onMinChange={setPaceMin} onSecChange={setPaceSec} required showUnitSuffix={false} />
           </div>
 
           <div className="flex flex-col gap-1">
@@ -312,7 +406,7 @@ export function RacePlanForm({
                 id="distance_preset"
                 value={distancePresetKey}
                 onChange={(e) => handleDistancePresetChange(e.target.value)}
-                className={SELECT_CLASS}
+                className={`${SELECT_CLASS} w-full`}
               >
                 {DISTANCE_PRESETS.map((preset) => (
                   <option key={preset.key} value={preset.key} className={OPTION_CLASS}>
@@ -336,13 +430,15 @@ export function RacePlanForm({
               />
             )}
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
             <label htmlFor="split_mode" className="text-sm font-medium text-foreground-secondary">
               Splits par
             </label>
             <div className="relative">
-              <select id="split_mode" value={splitMode} onChange={(e) => setSplitMode(e.target.value)} className={SELECT_CLASS}>
+              <select id="split_mode" value={splitMode} onChange={(e) => setSplitMode(e.target.value)} className={`${SELECT_CLASS} w-full`}>
                 {SPLIT_DISTANCE_PRESETS.map((km) => (
                   <option key={km} value={km} className={OPTION_CLASS}>
                     {km} km
@@ -355,34 +451,13 @@ export function RacePlanForm({
               <SelectChevron />
             </div>
           </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="elevation_gain_m" className="text-sm font-medium text-foreground-secondary">
-              D+ (m) <span className="text-foreground-tertiary">(optionnel)</span>
-            </label>
-            <input
-              id="elevation_gain_m"
-              type="number"
-              min={0}
-              value={elevationGainM}
-              onChange={(e) => setElevationGainM(e.target.value)}
-              className="rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="elevation_loss_m" className="text-sm font-medium text-foreground-secondary">
-              D- (m) <span className="text-foreground-tertiary">(optionnel)</span>
-            </label>
-            <input
-              id="elevation_loss_m"
-              type="number"
-              min={0}
-              value={elevationLossM}
-              onChange={(e) => setElevationLossM(e.target.value)}
-              className="rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
-            />
-          </div>
         </div>
+
+        {targetPaceSecPerKmNumber > 0 && (
+          <p className="text-[11px] font-semibold tracking-wide text-foreground-tertiary uppercase">
+            À {formatPaceCompact(targetPaceSecPerKmNumber)}
+          </p>
+        )}
 
         <div className="flex flex-col gap-2 rounded-[10px] border border-border bg-white/[.02] p-4">
           <div className="flex items-center justify-between">
@@ -408,46 +483,133 @@ export function RacePlanForm({
           <p className="text-sm text-foreground-secondary">{paceStrategyLabel(paceStrategy)}</p>
         </div>
 
+        {/* Masqués quand un GPX est chargé : le D+/D- vient alors du tracé
+            (par split), une saisie manuelle globale serait redondante — voir
+            mockup avec GPX importé, qui ne montre pas ces champs. */}
+        {(!gpxFilename || gpxCleared) && (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="elevation_gain_m" className="text-sm font-medium text-foreground-secondary">
+                D+ (m) <span className="text-foreground-tertiary">(optionnel)</span>
+              </label>
+              <input
+                id="elevation_gain_m"
+                type="number"
+                min={0}
+                value={elevationGainM}
+                onChange={(e) => setElevationGainM(e.target.value)}
+                className="rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="elevation_loss_m" className="text-sm font-medium text-foreground-secondary">
+                D- (m) <span className="text-foreground-tertiary">(optionnel)</span>
+              </label>
+              <input
+                id="elevation_loss_m"
+                type="number"
+                min={0}
+                value={elevationLossM}
+                onChange={(e) => setElevationLossM(e.target.value)}
+                className="rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+        )}
+
         {error && <p className="text-sm text-alert">{error}</p>}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="gradient-signature flex h-11 items-center justify-center self-start rounded-full px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          {loading ? "Enregistrement…" : "Enregistrer le plan"}
-        </button>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={loading}
+            className="gradient-signature flex h-11 items-center justify-center gap-2 rounded-[10px] px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            <IconDeviceFloppy size={16} stroke={1.75} />
+            {loading ? "Enregistrement…" : "Enregistrer et notifier le coureur"}
+          </button>
+        </div>
       </form>
 
-      {previewSplits && previewSplits.length > 0 && (
+      {splitsWithCumulative && splitsWithCumulative.length > 0 && (
         <section className="flex flex-col gap-4">
-          <h2 className="text-sm font-semibold tracking-tight text-foreground-secondary">Splits</h2>
           <div className="overflow-x-auto rounded-2xl border border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-white/[.02] text-left text-xs font-semibold text-foreground-tertiary uppercase">
-                  <th className="px-4 py-2.5">Lap</th>
-                  <th className="px-4 py-2.5">Distance</th>
-                  <th className="px-4 py-2.5">D+/D-</th>
-                  <th className="px-4 py-2.5">Allure cible</th>
+                  <th className="px-4 py-2.5">Point</th>
+                  <th className="px-4 py-2.5">D+ / D-</th>
+                  <th className="px-4 py-2.5">Allure</th>
+                  <th className="px-4 py-2.5">Segment</th>
+                  <th className="px-4 py-2.5">Cumul</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {previewSplits.map((split) => (
-                  <tr key={split.lapNumber}>
-                    <td className="px-4 py-2.5 text-foreground">
-                      {split.lapNumber}
-                      {split.isFinishLap && <span className="ml-2 text-xs text-foreground-tertiary">Arrivée</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-foreground-secondary">{split.distanceKm.toFixed(2)} km</td>
-                    <td className="px-4 py-2.5 text-foreground-secondary">
-                      {split.elevationGainM == null && split.elevationLossM == null
-                        ? "–"
-                        : `+${split.elevationGainM ?? 0} / -${split.elevationLossM ?? 0} m`}
-                    </td>
-                    <td className="px-4 py-2.5 font-mono text-foreground-secondary">{formatPace(split.targetPaceSecPerKm)}</td>
-                  </tr>
-                ))}
+                {splitsWithCumulative.map((split) => {
+                  const hasComment = !!comments[split.lapNumber];
+                  return (
+                    <Fragment key={split.lapNumber}>
+                      <tr>
+                        <td className="px-4 py-2.5 text-foreground">{formatDistanceKm(split.cumulativeDistanceKm)}</td>
+                        <td className="px-4 py-2.5">
+                          {split.elevationGainM == null && split.elevationLossM == null ? (
+                            <span className="text-foreground-secondary">–</span>
+                          ) : (
+                            <>
+                              <span className="text-green-400">+{split.elevationGainM ?? 0}</span>
+                              <span className="text-foreground-tertiary"> / </span>
+                              <span className="text-red-400">-{split.elevationLossM ?? 0}</span>
+                              <span className="text-foreground-secondary"> m</span>
+                            </>
+                          )}
+                        </td>
+                        <td className={`px-4 py-2.5 font-mono ${paceColorClass(split.targetPaceSecPerKm, targetPaceSecPerKmNumber)}`}>
+                          {formatPace(split.targetPaceSecPerKm)}
+                        </td>
+                        <td className="px-4 py-2.5 text-foreground-secondary">{formatDuration(split.segmentSeconds)}</td>
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-accent">{formatDuration(split.cumulativeSeconds)}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCommentEditor(split.lapNumber)}
+                              disabled={!racePlanId}
+                              title={racePlanId ? "Commenter ce split" : "Enregistre le plan pour pouvoir commenter les splits"}
+                              className={`rounded-full p-1 transition-colors ${
+                                hasComment ? "text-accent" : "text-foreground-tertiary"
+                              } ${racePlanId ? "hover:bg-white/[.08]" : "cursor-not-allowed opacity-40"}`}
+                            >
+                              <IconMessage size={15} stroke={1.75} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {editingLap === split.lapNumber && (
+                        <tr>
+                          <td colSpan={5} className="bg-white/[.02] px-4 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={commentDraft}
+                                onChange={(e) => setCommentDraft(e.target.value)}
+                                placeholder="Commenter ce split…"
+                                className="flex-1 rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveComment(split.lapNumber)}
+                                disabled={commentSaving}
+                                className="rounded-[10px] bg-accent px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                              >
+                                {commentSaving ? "…" : "OK"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

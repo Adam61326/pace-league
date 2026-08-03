@@ -92,3 +92,31 @@ function splitIndexForDistance(distanceKm: number, boundaries: number[]): number
   }
   return boundaries.length - 1;
 }
+
+export interface GpxSummary {
+  distanceKm: number;
+  elevationGainM: number;
+  elevationLossM: number;
+}
+
+// Résumé affiché sous le nom du fichier une fois importé (distance et D+/D-
+// de la trace elle-même, pas du plan) — indépendant de la distance/du
+// découpage configurés, purement informatif sur ce qui a été importé.
+export function computeGpxSummary(points: GpxPoint[]): GpxSummary {
+  let distanceKm = 0;
+  let elevationGainM = 0;
+  let elevationLossM = 0;
+
+  for (let i = 1; i < points.length; i++) {
+    const prev = points[i - 1];
+    const curr = points[i];
+    distanceKm += haversineKm(prev, curr);
+
+    if (prev.eleM == null || curr.eleM == null) continue;
+    const delta = curr.eleM - prev.eleM;
+    if (delta > 0) elevationGainM += delta;
+    else elevationLossM += -delta;
+  }
+
+  return { distanceKm, elevationGainM: Math.round(elevationGainM), elevationLossM: Math.round(elevationLossM) };
+}

@@ -46,6 +46,15 @@ export const DISTANCE_PRESETS: DistancePreset[] = [
   { key: "other", label: "Autre", distanceKm: null },
 ];
 
+// Partagé entre RacePlanForm (édition d'un plan existant) et AddRaceForm
+// (création d'une course) : les deux utilisent le même sélecteur de
+// distance, voir CLAUDE.md "UI — SÉLECTEUR DE DISTANCE".
+export function matchDistancePresetKey(distanceKm: number | null): string {
+  if (distanceKm == null) return "other";
+  const preset = DISTANCE_PRESETS.find((p) => p.distanceKm != null && Math.abs(p.distanceKm - distanceKm) < 0.005);
+  return preset?.key ?? "other";
+}
+
 // Dérive totale à intensité maximale (±1, "très positif"/"très négatif"),
 // en % de l'allure moyenne demandée, pic-à-pic. À intensité ±0.5 (anciens
 // crans "positif"/"négatif"), la dérive vaut donc 10% pic-à-pic — inchangé
@@ -60,8 +69,12 @@ const PACE_STRATEGY_MAX_SWING_PCT = 20;
 // bonus descente, en % de l'allure plutôt qu'en secondes fixes pour rester
 // proportionné à tous les niveaux. Plafond de pente pour ne pas laisser un
 // pic GPS erroné dans le GPX produire une allure aberrante sur un split.
-const RELIEF_K_UP_PCT_PER_GRADE_PCT = 3.5;
-const RELIEF_K_DOWN_PCT_PER_GRADE_PCT = 1.5;
+// Coefficients réduits une première fois (~15%, ratio montée/descente
+// conservé), puis réduits une seconde fois (~20% supplémentaires, ratio
+// toujours conservé) à la demande, l'impact du relief sur le chrono étant
+// encore jugé trop marqué.
+const RELIEF_K_UP_PCT_PER_GRADE_PCT = 2.4;
+const RELIEF_K_DOWN_PCT_PER_GRADE_PCT = 1.0;
 const RELIEF_MAX_GRADE_PCT = 15;
 
 export interface RacePlanSplit {
@@ -71,6 +84,7 @@ export interface RacePlanSplit {
   isFinishLap: boolean;
   elevationGainM: number | null;
   elevationLossM: number | null;
+  comment: string | null;
 }
 
 export interface RacePlan {
@@ -86,6 +100,11 @@ export interface RacePlan {
   paceStrategy: PaceStrategy;
   gpxFilename: string | null;
   splitDistanceKm: number;
+  // Bouton ON/OFF de l'éditeur : le D+/D- reste enregistré (par split et/ou
+  // globalement) même désactivé, seul son impact sur l'allure cible est
+  // neutralisé — voir computeRacePlanSplits. true par défaut (comportement
+  // historique inchangé pour les plans déjà enregistrés).
+  reliefEnabled: boolean;
 }
 
 export interface RaceSummary {
@@ -149,16 +168,18 @@ export function computeRacePlanSplits(
     splitDistanceKm?: number;
     paceStrategy?: PaceStrategy;
     splitElevations?: (SplitElevation | null)[];
+    reliefEnabled?: boolean;
   } = {}
 ): RacePlanSplit[] {
   const splitDistanceKm = options.splitDistanceKm ?? LAP_DISTANCE_KM;
   const paceStrategy = options.paceStrategy ?? 0;
+  const reliefEnabled = options.reliefEnabled ?? true;
   const laps = computeSplitDistances(distanceKm, splitDistanceKm);
 
   return laps.map((lap, index) => {
     const strategyDelta = computeStrategyDeltaSecPerKm(targetPaceSecPerKm, paceStrategy, index, laps.length);
     const elevation = options.splitElevations?.[index] ?? null;
-    const reliefDelta = elevation ? computeReliefDeltaSecPerKm(targetPaceSecPerKm, lap.distanceKm, elevation) : 0;
+    const reliefDelta = reliefEnabled && elevation ? computeReliefDeltaSecPerKm(targetPaceSecPerKm, lap.distanceKm, elevation) : 0;
 
     return {
       lapNumber: index + 1,
@@ -167,6 +188,11 @@ export function computeRacePlanSplits(
       isFinishLap: lap.isFinishLap,
       elevationGainM: elevation?.elevationGainM ?? null,
       elevationLossM: elevation?.elevationLossM ?? null,
+      // Les commentaires vivent dans une table séparée (race_plan_split_comments)
+      // car cette fonction pure ne connaît pas le plan persisté — RacePlanForm
+      // les superpose après coup en les associant par lapNumber, voir
+      // mergeSplitComments.
+      comment: null,
     };
   });
 }
@@ -184,6 +210,7 @@ interface RacePlanRow {
   pace_strategy: PaceStrategy;
   gpx_filename: string | null;
   split_distance_km: number;
+  relief_enabled: boolean;
   races: { name: string; race_date: string | null } | null;
 }
 
@@ -194,6 +221,11 @@ interface RacePlanSplitRow {
   is_finish_lap: boolean;
   elevation_gain_m: number | null;
   elevation_loss_m: number | null;
+}
+
+interface RacePlanSplitCommentRow {
+  lap_number: number;
+  comment: string;
 }
 
 interface RaceRow {
@@ -210,7 +242,7 @@ interface RaceRow {
 // plans migrés depuis le sprint précédent (20260802000000), mais aucune
 // écriture n'y passe plus (voir app/api/course-plan/route.ts).
 const RACE_PLAN_COLUMNS =
-  "id, race_id, user_id, race_name, race_date, distance_km, target_pace_sec_per_km, elevation_gain_m, elevation_loss_m, pace_strategy, gpx_filename, split_distance_km, races(name, race_date)";
+  "id, race_id, user_id, race_name, race_date, distance_km, target_pace_sec_per_km, elevation_gain_m, elevation_loss_m, pace_strategy, gpx_filename, split_distance_km, relief_enabled, races(name, race_date)";
 const RACE_PLAN_SPLIT_COLUMNS = "lap_number, distance_km, target_pace_sec_per_km, is_finish_lap, elevation_gain_m, elevation_loss_m";
 
 function toRacePlan(row: RacePlanRow): RacePlan {
@@ -227,10 +259,11 @@ function toRacePlan(row: RacePlanRow): RacePlan {
     paceStrategy: Number(row.pace_strategy),
     gpxFilename: row.gpx_filename,
     splitDistanceKm: Number(row.split_distance_km),
+    reliefEnabled: row.relief_enabled,
   };
 }
 
-function toRacePlanSplit(row: RacePlanSplitRow): RacePlanSplit {
+function toRacePlanSplit(row: RacePlanSplitRow, comment: string | null): RacePlanSplit {
   return {
     lapNumber: row.lap_number,
     distanceKm: Number(row.distance_km),
@@ -238,19 +271,34 @@ function toRacePlanSplit(row: RacePlanSplitRow): RacePlanSplit {
     isFinishLap: row.is_finish_lap,
     elevationGainM: row.elevation_gain_m != null ? Number(row.elevation_gain_m) : null,
     elevationLossM: row.elevation_loss_m != null ? Number(row.elevation_loss_m) : null,
+    comment,
   };
 }
 
+// Les commentaires vivent dans race_plan_split_comments, une table séparée
+// de race_plan_splits (régénérée en bloc à chaque enregistrement du plan,
+// voir app/api/course-plan/route.ts) — jointe ici par lap_number plutôt que
+// par FK directe pour survivre à cette régénération.
 async function fetchSplitsForPlan(supabase: SupabaseClient, racePlanId: string): Promise<RacePlanSplit[]> {
-  const { data: splitRows, error } = await supabase
-    .from("race_plan_splits")
-    .select(RACE_PLAN_SPLIT_COLUMNS)
-    .eq("race_plan_id", racePlanId)
-    .order("lap_number", { ascending: true })
-    .returns<RacePlanSplitRow[]>();
+  const [{ data: splitRows, error }, { data: commentRows, error: commentError }] = await Promise.all([
+    supabase
+      .from("race_plan_splits")
+      .select(RACE_PLAN_SPLIT_COLUMNS)
+      .eq("race_plan_id", racePlanId)
+      .order("lap_number", { ascending: true })
+      .returns<RacePlanSplitRow[]>(),
+    supabase
+      .from("race_plan_split_comments")
+      .select("lap_number, comment")
+      .eq("race_plan_id", racePlanId)
+      .returns<RacePlanSplitCommentRow[]>(),
+  ]);
 
   if (error) throw error;
-  return (splitRows ?? []).map(toRacePlanSplit);
+  if (commentError) throw commentError;
+
+  const commentsByLapNumber = new Map((commentRows ?? []).map((c) => [c.lap_number, c.comment]));
+  return (splitRows ?? []).map((row) => toRacePlanSplit(row, commentsByLapNumber.get(row.lap_number) ?? null));
 }
 
 // Liste des courses d'un utilisateur pour la section "Course à préparer"

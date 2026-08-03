@@ -1,7 +1,8 @@
 "use client";
 
+import { OPTION_CLASS, SELECT_CLASS, SelectChevron } from "@/components/select-field";
 import { formatDistanceKm, formatRaceDate } from "@/lib/format";
-import type { RaceSummary } from "@/lib/race-plan";
+import { DISTANCE_PRESETS, type RaceSummary } from "@/lib/race-plan";
 import { IconFlag, IconPlus } from "@tabler/icons-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -45,9 +46,18 @@ function RaceCard({ race, selected }: { race: RaceSummary; selected: boolean }) 
 function AddRaceForm({ onCreated }: { onCreated: (raceId: string) => void }) {
   const [name, setName] = useState("");
   const [raceDate, setRaceDate] = useState("");
-  const [distanceKm, setDistanceKm] = useState("");
+  const [distancePresetKey, setDistancePresetKey] = useState(DISTANCE_PRESETS[0].key);
+  const [distanceKm, setDistanceKm] = useState(String(DISTANCE_PRESETS[0].distanceKm));
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const showFreeDistanceInput = distancePresetKey === "trail" || distancePresetKey === "other";
+
+  function handleDistancePresetChange(key: string) {
+    setDistancePresetKey(key);
+    const preset = DISTANCE_PRESETS.find((p) => p.key === key);
+    setDistanceKm(preset?.distanceKm != null ? String(preset.distanceKm) : "");
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -80,7 +90,10 @@ function AddRaceForm({ onCreated }: { onCreated: (raceId: string) => void }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end">
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-end"
+    >
       <div className="flex flex-1 flex-col gap-1">
         <label htmlFor="new_race_name" className="text-xs font-medium text-foreground-secondary">
           Nom de la course
@@ -107,18 +120,37 @@ function AddRaceForm({ onCreated }: { onCreated: (raceId: string) => void }) {
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label htmlFor="new_race_distance" className="text-xs font-medium text-foreground-secondary">
+        <label htmlFor="new_race_distance_preset" className="text-xs font-medium text-foreground-secondary">
           Distance (km)
         </label>
-        <input
-          id="new_race_distance"
-          type="number"
-          min={0.1}
-          step={0.1}
-          value={distanceKm}
-          onChange={(e) => setDistanceKm(e.target.value)}
-          className="w-28 rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
-        />
+        <div className="relative">
+          <select
+            id="new_race_distance_preset"
+            value={distancePresetKey}
+            onChange={(e) => handleDistancePresetChange(e.target.value)}
+            className={`${SELECT_CLASS} w-full`}
+          >
+            {DISTANCE_PRESETS.map((preset) => (
+              <option key={preset.key} value={preset.key} className={OPTION_CLASS}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+          <SelectChevron />
+        </div>
+        {showFreeDistanceInput && (
+          <input
+            id="new_race_distance"
+            type="number"
+            required
+            min={0.1}
+            step={0.1}
+            value={distanceKm}
+            onChange={(e) => setDistanceKm(e.target.value)}
+            placeholder="Distance (km)"
+            className="mt-1 rounded-[10px] border border-border bg-white/5 px-3 py-2 text-sm text-foreground outline-none focus:border-accent"
+          />
+        )}
       </div>
       <button
         type="submit"
@@ -138,7 +170,7 @@ export function RaceList({ races, selectedRaceId }: { races: RaceSummary[]; sele
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xs font-semibold tracking-wide text-foreground-secondary uppercase">Course à préparer</h2>
         <div className="flex items-center gap-3">
           <span className="text-xs text-foreground-tertiary">

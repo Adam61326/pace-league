@@ -6,6 +6,7 @@ import { Logo } from "@/components/logo";
 import type { PendingClubInvitation } from "@/lib/club-invitations";
 import type { PendingCoachInvitation } from "@/lib/coach";
 import {
+  IconCalendar,
   IconChevronDown,
   IconClipboardList,
   IconCrown,
@@ -60,6 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/historique", label: "Historique", icon: IconHistory },
       { href: "/records", label: "Records", icon: IconTrophy },
       { href: "/statistiques", label: "Statistiques", icon: IconChartRadar },
+      { href: "/calendrier", label: "Calendrier", icon: IconCalendar },
       { href: "/plan-entrainement", label: "Plan d'entraînement", icon: IconClipboardList },
     ],
   },

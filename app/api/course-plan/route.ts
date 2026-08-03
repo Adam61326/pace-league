@@ -66,6 +66,7 @@ export async function POST(request: NextRequest) {
   const gpxFilename = toNullableString(body.gpx_filename);
   const splitDistanceKm = toPositiveNumber(body.split_distance_km) ?? 1;
   const splitElevations = toSplitElevations(body.split_elevations);
+  const reliefEnabled = body.relief_enabled !== false;
 
   if (!raceId) {
     return NextResponse.json({ error: "invalid_race_id" }, { status: 400 });
@@ -110,6 +111,7 @@ export async function POST(request: NextRequest) {
         pace_strategy: paceStrategy,
         gpx_filename: gpxFilename,
         split_distance_km: splitDistanceKm,
+        relief_enabled: reliefEnabled,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "race_id" }
@@ -137,6 +139,7 @@ export async function POST(request: NextRequest) {
     splitDistanceKm,
     paceStrategy,
     splitElevations: splitElevations ?? undefined,
+    reliefEnabled,
   });
 
   const { error: insertError } = await supabase.from("race_plan_splits").insert(

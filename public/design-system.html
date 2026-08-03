@@ -1,0 +1,1209 @@
+<title>PaceLeague design system</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ---------------------------------------------------------------------
+     Tokens — lifted 1:1 from app/globals.css. Brand identity is a fixed
+     dark surface by design (color-scheme: dark, no prefers-color-scheme
+     branch) so this artifact stays single-theme on purpose, same as the
+     product itself.
+     --------------------------------------------------------------------- */
+  :root {
+    --bg: #09090b;
+    --surface: #12141c;
+    --surface-hover: #171a24;
+    --border: rgb(203 213 225 / 10%);
+    --border-strong: rgb(203 213 225 / 20%);
+    --fg: #fafafa;
+    --fg-2: #94a3b8;
+    --fg-3: #64748b;
+    --accent: #2563eb;
+    --accent-2: #06b6d4;
+    --accent-hover: #1d4fd1;
+    --alert: #e0603d;
+    --green: #4ade80;
+    --red: #f87171;
+    --purple: #c084fc;
+    --gold: #f0b429;
+    --silver: #cbd5e1;
+    --bronze: #d08a52;
+    --font-display: "Space Grotesk", "Avenir Next", "Century Gothic", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+  h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  button { font: inherit; color: inherit; }
+  ::selection { background: color-mix(in srgb, var(--accent) 40%, transparent); }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+  }
+
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon-sm { width: 14px; height: 14px; }
+  .icon-lg { width: 22px; height: 22px; }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------------------------------------------------------------------
+     App shell
+     --------------------------------------------------------------------- */
+  .app { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background-image: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    color: white; flex-shrink: 0;
+  }
+  .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand-text b { font-family: var(--font-display); font-size: 15px; letter-spacing: 0.02em; }
+  .brand-text span { font-size: 10px; letter-spacing: 0.14em; color: var(--fg-3); text-transform: uppercase; }
+
+  .nav { flex: 1; overflow-y: auto; padding: 16px 12px; display: flex; flex-direction: column; gap: 20px; }
+  .nav-group span.nav-label {
+    display: block; padding: 0 10px 6px; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-3);
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 8px 10px; border-radius: 10px; border: none; background: none;
+    font-size: 13.5px; font-weight: 500; color: var(--fg-2); cursor: pointer;
+    transition: background-color .15s, color .15s;
+  }
+  .nav-item:hover { background: rgb(255 255 255 / 6%); color: var(--fg); }
+  .nav-item.active { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .nav-item .icon { color: currentColor; }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 999px; flex-shrink: 0;
+    background-image: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: white;
+  }
+  .sidebar-footer .who { min-width: 0; flex: 1; }
+  .sidebar-footer .who b { display: block; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sidebar-footer .who small { color: var(--fg-3); font-size: 11.5px; }
+
+  .content { flex: 1; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px; border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(8px);
+  }
+  .topbar h1 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .topbar .sub { color: var(--fg-3); font-size: 12.5px; margin-top: 2px; }
+  .topbar-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+    background: transparent; display: flex; align-items: center; justify-content: center;
+    color: var(--fg-2); cursor: pointer;
+  }
+  .icon-btn:hover { background: rgb(255 255 255 / 6%); color: var(--fg); }
+
+  .view { display: none; padding: 28px 32px 56px; max-width: 1180px; }
+  .view.active { display: block; }
+
+  /* ---------------------------------------------------------------------
+     Shared card / form primitives — match components/*.tsx exactly
+     --------------------------------------------------------------------- */
+  .card { border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 20px; }
+  .card-tight { padding: 16px; }
+  .label-eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3);
+  }
+  .field-label { font-size: 13px; font-weight: 500; color: var(--fg-2); }
+  .input, select.select, .textarea {
+    width: 100%; border-radius: 10px; border: 1px solid var(--border);
+    background: rgb(255 255 255 / 5%); color: var(--fg); padding: 8px 12px; font-size: 13.5px;
+    outline: none; font-family: inherit;
+  }
+  .input:focus, select.select:focus, .textarea:focus { border-color: var(--accent); }
+  select.select { appearance: none; padding-right: 30px; }
+  .select-wrap { position: relative; }
+  .select-wrap .chevron { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--fg-3); pointer-events: none; }
+  .btn-primary {
+    background-image: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: white; border: none; border-radius: 10px; padding: 10px 20px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: .9; }
+  .btn-ghost {
+    border: 1px solid var(--border); background: transparent; border-radius: 10px;
+    padding: 9px 16px; font-size: 13px; font-weight: 600; color: var(--fg-2); cursor: pointer;
+  }
+  .btn-ghost:hover { background: rgb(255 255 255 / 6%); }
+  .pill { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .switch { position: relative; width: 42px; height: 24px; border-radius: 999px; border: none; cursor: pointer; background: rgb(255 255 255 / 15%); transition: background-color .15s; flex-shrink: 0; }
+  .switch.on { background: var(--accent); }
+  .switch .knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 999px; background: white; transition: transform .15s; }
+  .switch.on .knob { transform: translateX(18px); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  table.data th {
+    text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--fg-3); border-bottom: 1px solid var(--border); background: rgb(255 255 255 / 2%);
+  }
+  table.data td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+  table.data tbody tr:last-child td { border-bottom: none; }
+  .table-wrap { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; overflow-x: auto; }
+
+  /* ---------------------------------------------------------------------
+     Dashboard
+     --------------------------------------------------------------------- */
+  .hello { font-size: 13.5px; color: var(--fg-2); margin-bottom: 4px; }
+  .headline { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 24px; }
+  .headline em { font-style: normal; background-image: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .stat-row { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; margin-bottom: 14px; }
+  @media (max-width: 860px) { .stat-row { grid-template-columns: 1fr; } }
+  .ring-card { display: flex; align-items: center; gap: 20px; }
+  .ring-wrap { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-value { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring-value b { font-size: 26px; font-weight: 700; font-family: var(--font-display); }
+  .ring-value span { font-size: 9.5px; letter-spacing: 0.1em; color: var(--fg-3); text-transform: uppercase; }
+  .ring-copy b { display: block; font-size: 14.5px; font-weight: 600; margin-bottom: 2px; }
+  .ring-copy span { font-size: 12.5px; color: var(--fg-3); }
+
+  .mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .mini-stat { display: flex; flex-direction: column; gap: 6px; }
+  .mini-stat .top { display: flex; align-items: center; justify-content: space-between; color: var(--fg-3); }
+  .mini-stat .top .icon { color: var(--accent); }
+  .mini-stat .delta { font-size: 11.5px; font-weight: 700; }
+  .mini-stat .delta.up { color: var(--green); }
+  .mini-stat .delta.down { color: var(--alert); }
+  .mini-stat .value { font-family: var(--font-mono); font-size: 21px; font-weight: 600; }
+  .mini-stat .value small { font-family: var(--font-sans); font-size: 12px; font-weight: 500; color: var(--fg-3); margin-left: 3px; }
+  .mini-stat .cap { font-size: 12px; color: var(--fg-3); }
+
+  .split-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; }
+  @media (max-width: 860px) { .split-row { grid-template-columns: 1fr; } }
+
+  .bars { display: flex; align-items: flex-end; gap: 14px; height: 140px; padding-top: 10px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; justify-content: flex-end; }
+  .bar-pair { display: flex; align-items: flex-end; gap: 3px; height: 100%; }
+  .bar { width: 9px; border-radius: 4px 4px 0 0; }
+  .bar.now { background-image: linear-gradient(180deg, var(--accent-2), var(--accent)); }
+  .bar.prev { background: rgb(255 255 255 / 12%); }
+  .bar-col .day { font-size: 10.5px; color: var(--fg-3); }
+  .legend { display: flex; gap: 14px; font-size: 11.5px; color: var(--fg-3); }
+  .legend .dot { display: inline-block; width: 7px; height: 7px; border-radius: 999px; margin-right: 5px; }
+
+  .division-card { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+  .tier-badge {
+    width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    background: color-mix(in srgb, var(--gold) 18%, var(--surface)); border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+    color: var(--gold); margin-bottom: 6px;
+  }
+  .division-card .tier-name { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.04em; color: var(--gold); font-size: 13px; }
+  .division-card .rank { font-size: 20px; font-weight: 700; margin: 2px 0; }
+  .division-card .cohort { font-size: 12px; color: var(--fg-3); margin-bottom: 10px; }
+  .bar-track { width: 100%; height: 6px; border-radius: 999px; background: rgb(255 255 255 / 8%); overflow: hidden; margin-bottom: 6px; }
+  .bar-fill { height: 100%; background-image: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; }
+  .bar-caption { display: flex; justify-content: space-between; width: 100%; font-size: 11px; color: var(--fg-3); margin-bottom: 10px; }
+  .link-accent { color: var(--accent); font-size: 12.5px; font-weight: 600; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 860px) { .two-col { grid-template-columns: 1fr; } }
+  .card-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; color: var(--fg-3); }
+  .card-title-row .icon { color: var(--accent); }
+
+  /* ---------------------------------------------------------------------
+     Ligues
+     --------------------------------------------------------------------- */
+  .ladder { display: flex; gap: 4px; margin: 4px 0 18px; }
+  .ladder-seg { flex: 1; height: 6px; border-radius: 999px; background: rgb(255 255 255 / 8%); }
+  .ladder-seg.done { background: var(--fg-3); }
+  .ladder-seg.current { background-image: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .ladder-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 22px; }
+
+  .zone-tag { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; }
+  .zone-tag.promo { color: var(--green); background: color-mix(in srgb, var(--green) 15%, transparent); }
+  .zone-tag.releg { color: var(--red); background: color-mix(in srgb, var(--red) 15%, transparent); }
+  .row-me td { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+  .me-tag { font-size: 10px; font-weight: 700; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 999px; padding: 1px 7px; margin-left: 7px; }
+
+  /* ---------------------------------------------------------------------
+     Calendrier
+     --------------------------------------------------------------------- */
+  .cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-nav { display: flex; gap: 6px; }
+  .cal-grid { border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); background: rgb(255 255 255 / 2%); }
+  .cal-weekdays div { padding: 8px; text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-cell {
+    min-height: 84px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border);
+    padding: 8px; display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+    background: transparent; text-align: left; cursor: pointer; color: inherit;
+  }
+  .cal-cell:hover { background: rgb(255 255 255 / 4%); }
+  .cal-cell.empty { background: rgb(255 255 255 / 1%); cursor: default; }
+  .cal-daynum { width: 22px; height: 22px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 600; color: var(--fg-2); }
+  .cal-daynum.today { background: var(--accent); color: white; }
+  .cal-pill { width: 100%; font-size: 10.5px; font-weight: 600; padding: 3px 7px; border-radius: 999px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .type-endurance { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+  .type-fractionne { background: color-mix(in srgb, var(--alert) 15%, transparent); color: var(--alert); }
+  .type-renfo_ppg { background: color-mix(in srgb, var(--purple) 15%, transparent); color: var(--purple); }
+  .type-repos { background: rgb(255 255 255 / 10%); color: var(--fg-3); }
+  .tab-endurance.active { background: var(--accent); color: white; }
+  .tab-fractionne.active { background: var(--alert); color: white; }
+  .tab-renfo_ppg.active { background: var(--purple); color: white; }
+  .tab-repos.active { background: #6b7280; color: white; }
+  .type-tab { border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--fg-2); border-radius: 10px; padding: 8px 16px; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
+  .type-tab:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 60%); z-index: 40; display: none; }
+  .modal-backdrop.open { display: block; }
+  .modal-wrap { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal-wrap.open { display: flex; }
+  .modal { width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); padding: 24px; }
+  .modal h2 { font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+  .modal .sub { color: var(--fg-2); font-size: 13px; margin-top: 4px; margin-bottom: 18px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field-grid .full { grid-column: 1 / -1; }
+  .pace-pair { display: flex; align-items: center; gap: 8px; }
+  .pace-pair .input { text-align: left; }
+  .duration-triplet { display: flex; align-items: center; gap: 8px; }
+
+  /* ---------------------------------------------------------------------
+     Plan de course
+     --------------------------------------------------------------------- */
+  .race-cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .race-card {
+    min-width: 210px; flex: 1; border: 1px solid var(--border); background: var(--surface);
+    border-radius: 16px; padding: 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+  }
+  .race-card:hover { border-color: var(--border-strong); }
+  .race-card.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
+  .race-card .name { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; }
+  .race-card .meta { font-size: 12px; color: var(--fg-2); }
+  .race-card .status { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+
+  .dropzone {
+    border: 1px dashed var(--border); border-radius: 10px; background: rgb(255 255 255 / 2%);
+    padding: 22px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; cursor: pointer;
+  }
+  .dropzone:hover { border-color: var(--accent); }
+  .dropzone-filled { display: flex; align-items: center; gap: 12px; border: 1px dashed var(--border); border-radius: 10px; background: rgb(255 255 255 / 2%); padding: 12px 16px; }
+
+  .strategy-track { width: 100%; accent-color: var(--accent); }
+  .strategy-labels { display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-3); margin-top: 4px; }
+
+  .pace-cell.faster { color: var(--accent); }
+  .pace-cell.slower { color: var(--red); }
+  .pace-cell.even { color: var(--fg-2); }
+  .comment-btn { border: none; background: none; border-radius: 999px; padding: 4px; cursor: pointer; color: var(--fg-3); }
+  .comment-btn.has { color: var(--accent); }
+  .comment-btn:hover { background: rgb(255 255 255 / 8%); }
+  .comment-editor { display: none; gap: 8px; padding: 10px 14px; background: rgb(255 255 255 / 2%); }
+  .comment-editor.open { display: flex; }
+
+  /* ---------------------------------------------------------------------
+     Badges & Hall of Fame
+     --------------------------------------------------------------------- */
+  .badge-section { margin-bottom: 26px; }
+  .badge-section h3 { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: 12px; }
+  .badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .badge-tile { border: 1px solid var(--border); background: var(--surface); border-radius: 14px; padding: 14px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
+  .badge-tile .badge-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+  .badge-tile.earned .badge-icon { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent-2); }
+  .badge-tile.locked { opacity: .45; }
+  .badge-tile.locked .badge-icon { background: rgb(255 255 255 / 6%); color: var(--fg-3); }
+  .badge-tile .b-label { font-size: 12px; font-weight: 600; }
+  .badge-tile .b-thresh { font-size: 10.5px; color: var(--fg-3); }
+
+  .podium { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: end; margin-bottom: 6px; }
+  .podium-card { border: 1px solid var(--border); background: var(--surface); border-radius: 16px; padding: 18px 14px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .podium-card.rank-1 { padding-top: 26px; border-color: color-mix(in srgb, var(--gold) 45%, var(--border)); }
+  .medal { width: 46px; height: 46px; border-radius: 999px; display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 15px; color: #09090b; }
+  .medal.gold { background: var(--gold); }
+  .medal.silver { background: var(--silver); }
+  .medal.bronze { background: var(--bronze); }
+  .podium-card .p-name { font-weight: 700; font-size: 13.5px; }
+  .podium-card .p-pts { font-family: var(--font-mono); color: var(--fg-2); font-size: 12.5px; }
+
+  /* mobile fallback: keep it simple, sidebar collapses to icons-only rail */
+  @media (max-width: 900px) {
+    .sidebar { width: 76px; }
+    .brand-text, .nav-label, .nav-item span, .sidebar-footer .who { display: none; }
+    .nav-item { justify-content: center; }
+    .brand { justify-content: center; }
+    .view { padding: 22px 16px 48px; }
+  }
+</style>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
+      <div class="brand-text"><b>PACELEAGUE</b><span>Run. Rise. Reign.</span></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-footer">
+      <div class="avatar">SD</div>
+      <div class="who"><b>Sanne de Vries</b><small>Or I · 2 708 pts</small></div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <header class="topbar">
+      <div><h1 id="view-title">Tableau de bord</h1><div class="sub" id="view-sub">Vue d'ensemble de ta semaine</div></div>
+      <div class="topbar-actions">
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg></button>
+        <button class="icon-btn"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></button>
+      </div>
+    </header>
+
+    <!-- ============================= DASHBOARD ============================= -->
+    <section class="view active" id="view-dashboard">
+      <p class="hello">Bonjour, Sanne 👋</p>
+      <h2 class="headline">Prête à <em>exploser</em> tes limites ?</h2>
+
+      <div class="stat-row">
+        <div class="card ring-card">
+          <div class="ring-wrap">
+            <svg width="108" height="108" viewBox="0 0 108 108">
+              <circle cx="54" cy="54" r="46" fill="none" stroke="rgb(255 255 255 / 8%)" stroke-width="10"/>
+              <circle cx="54" cy="54" r="46" fill="none" stroke="url(#ringGrad)" stroke-width="10" stroke-linecap="round"
+                stroke-dasharray="289" stroke-dashoffset="66.5"/>
+              <defs><linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#06b6d4"/><stop offset="1" stop-color="#2563eb"/>
+              </linearGradient></defs>
+            </svg>
+            <div class="ring-value"><b>77</b><span>Forme</span></div>
+          </div>
+          <div class="ring-copy"><b>Indice de forme optimal</b><span>Tu es au sommet de ton cycle</span></div>
+        </div>
+
+        <div class="mini-stats">
+          <div class="card mini-stat">
+            <div class="top"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19 9 9l4 6 3-5 4 9"/></svg><span class="delta up">↑ 12%</span></div>
+            <div class="value">95,0 <small>km</small></div>
+            <div class="cap">Distance semaine</div>
+          </div>
+          <div class="card mini-stat">
+            <div class="top"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><span class="delta up">↑ 8%</span></div>
+            <div class="value">15h19</div>
+            <div class="cap">Temps total</div>
+          </div>
+          <div class="card mini-stat">
+            <div class="top"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 20h18z"/></svg><span class="delta down">↓ 5%</span></div>
+            <div class="value">1 100 <small>m</small></div>
+            <div class="cap">Dénivelé</div>
+          </div>
+          <div class="card mini-stat">
+            <div class="top"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg><span class="delta down">↓ 3%</span></div>
+            <div class="value">4:15 <small>/km</small></div>
+            <div class="cap">Allure moyenne</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="split-row" style="margin-bottom:14px">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div><b style="font-size:14px">Volume hebdomadaire</b><div style="font-size:12px;color:var(--fg-3);margin-top:2px">Cette semaine vs semaine dernière</div></div>
+            <div class="legend"><span><i class="dot" style="background:var(--accent-2)"></i>Cette semaine</span><span><i class="dot" style="background:rgb(255 255 255 / 25%)"></i>Précédente</span></div>
+          </div>
+          <div class="bars" id="weekly-bars"></div>
+        </div>
+
+        <div class="card division-card">
+          <span class="label-eyebrow">Ta division</span>
+          <div class="tier-badge"><svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 6 4 3 6-7 6 7 4-3-2 13H4z"/><line x1="6" y1="21" x2="18" y2="21"/></svg></div>
+          <span class="tier-name">OR I</span>
+          <div class="rank">RANG #4</div>
+          <div class="cohort">Or I · Global</div>
+          <div class="bar-track" style="width:100%"><div class="bar-fill" style="width:78%"></div></div>
+          <div class="bar-caption"><span>2 708 pts</span><span>Prochain : Diamant</span></div>
+          <a class="link-accent" data-nav="ligues">Voir le classement →</a>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title-row"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v5h16v-5"/><path d="M12 4v11m0 0-4-4m4 4 4-4"/></svg><span class="label-eyebrow">Prochaine course</span></div>
+          <b style="font-size:15px">Marathon de Varsovie</b>
+          <p style="font-size:12.5px;color:var(--fg-2);margin:3px 0 12px">Varsovie, PL · 42,195 km · 27 sept. 2026</p>
+          <button class="btn-ghost" data-nav="plan" style="border-color:color-mix(in srgb, var(--accent) 45%, transparent); color:var(--accent)">Voir la stratégie</button>
+        </div>
+        <div class="card">
+          <div class="card-title-row"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg><span class="label-eyebrow">Analyse IA de ta semaine</span></div>
+          <p style="font-size:13px;color:var(--fg-2);line-height:1.5">Ta forme progresse et ta charge reste dans la zone optimale. Bon moment pour une séance de qualité.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== LIGUES ================================ -->
+    <section class="view" id="view-ligues">
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+          <div><b style="font-family:var(--font-display);font-size:16px">Progression par paliers</b><p style="font-size:12.5px;color:var(--fg-2);margin-top:2px">Bronze III → Legend, cohortes hebdomadaires de niveau comparable</p></div>
+          <span class="pill" style="background:color-mix(in srgb, var(--gold) 18%, transparent); color:var(--gold)">Or I</span>
+        </div>
+        <div class="ladder" style="margin-top:16px" id="ladder"></div>
+        <div class="ladder-labels"><span>Bronze III</span><span>Or I (toi)</span><span>Legend</span></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <b style="font-size:14px">Ta cohorte cette semaine</b>
+          <span style="font-size:12px;color:var(--fg-3)">24 coureurs actifs · mouvements appliqués dimanche 23:59 UTC</span>
+        </div>
+        <p style="font-size:12.5px;color:var(--fg-2);margin-bottom:14px">Top 5 → promotion Diamant · Bottom 5 → relégation Or II</p>
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th style="width:60px">Rang</th><th>Coureur</th><th>Points</th><th style="width:120px">Mouvement</th></tr></thead>
+            <tbody id="cohort-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ CALENDRIER ============================== -->
+    <section class="view" id="view-calendrier">
+      <div class="cal-head">
+        <h2 style="font-size:17px;font-weight:600" id="cal-month-label">Août 2026</h2>
+        <div class="cal-nav">
+          <button class="icon-btn" id="cal-prev"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+          <button class="icon-btn" id="cal-next"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        </div>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-weekdays"><div>Lun</div><div>Mar</div><div>Mer</div><div>Jeu</div><div>Ven</div><div>Sam</div><div>Dim</div></div>
+        <div class="cal-days" id="cal-days"></div>
+      </div>
+    </section>
+
+    <!-- ============================ PLAN DE COURSE =========================== -->
+    <section class="view" id="view-plan">
+      <div class="race-cards" id="race-cards"></div>
+
+      <form class="card" id="plan-form" style="margin-bottom:20px" onsubmit="return false">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div class="card-title-row" style="margin-bottom:0">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>
+            <span class="label-eyebrow">Modifier le plan de course · <span id="plan-race-name">Marathon de Varsovie</span></span>
+          </div>
+          <span class="pill" style="background:color-mix(in srgb, var(--accent) 15%, transparent); color:var(--accent)">Course active</span>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+            <p class="label-eyebrow">Parcours (.gpx)</p>
+            <button type="button" class="link-accent" id="gpx-remove" style="display:none;background:none;border:none;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;font-size:11px">Retirer</button>
+          </div>
+          <label class="dropzone" id="gpx-dropzone">
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 20h18z"/></svg>
+            <span style="font-size:13.5px;font-weight:500">Importer la trace de la course</span>
+            <span style="font-size:11.5px;color:var(--fg-3)">Le D+/D- est analysé pour ajuster les allures de chaque split.</span>
+            <input type="file" accept=".gpx" id="gpx-input" style="display:none" />
+          </label>
+          <div class="dropzone-filled" id="gpx-filled" style="display:none">
+            <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 3 20h18z"/></svg>
+            <div><div style="font-size:13.5px;font-weight:600" id="gpx-filename"></div><div style="font-size:11.5px;color:var(--fg-3)" id="gpx-summary"></div></div>
+          </div>
+        </div>
+
+        <div class="card-tight" style="display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--border);border-radius:10px;background:rgb(255 255 255 / 2%);margin-bottom:16px">
+          <div><p class="label-eyebrow" style="margin-bottom:2px">Impact du D+/D- sur le chrono</p><span style="font-size:12px;color:var(--fg-2)" id="relief-copy">Les allures cibles tiennent compte du relief.</span></div>
+          <button type="button" class="switch on" id="relief-toggle"><span class="knob"></span></button>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px">
+          <div>
+            <div class="field-label" style="margin-bottom:6px">Allure cible (min:sec / km)</div>
+            <div class="pace-pair">
+              <input class="input" type="number" id="pace-min" value="4" min="0" max="59" aria-label="minutes"/>
+              <span style="color:var(--fg-3)">:</span>
+              <input class="input" type="number" id="pace-sec" value="15" min="0" max="59" aria-label="secondes"/>
+            </div>
+          </div>
+          <div>
+            <div class="field-label" style="margin-bottom:6px">Distance totale</div>
+            <div class="select-wrap">
+              <select class="select" id="distance-preset">
+                <option value="5">5 km</option><option value="10">10 km</option><option value="21.1">Semi-marathon (21,1 km)</option>
+                <option value="42.195" selected>Marathon (42,195 km)</option><option value="16.09">10 miles (16,09 km)</option>
+              </select>
+              <svg class="chevron icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:6px">
+          <div class="field-label" style="margin-bottom:6px">Splits par</div>
+          <div class="select-wrap" style="max-width:220px">
+            <select class="select" id="split-mode">
+              <option value="1" selected>1 km</option><option value="2">2 km</option><option value="5">5 km</option><option value="10">10 km</option><option value="full">Course complète</option>
+            </select>
+            <svg class="chevron icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+        </div>
+        <p class="label-eyebrow" id="pace-summary" style="margin:10px 0 16px"></p>
+
+        <div class="card-tight" style="border:1px solid var(--border);border-radius:10px;background:rgb(255 255 255 / 2%);margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <p class="label-eyebrow">Stratégie d'allure</p>
+            <button type="button" class="link-accent" id="strategy-reset" style="background:none;border:none;cursor:pointer">Réinitialiser</button>
+          </div>
+          <input type="range" class="strategy-track" id="strategy-slider" min="-1" max="1" step="0.5" value="0"/>
+          <div class="strategy-labels"><span>Positif</span><span>Régulier</span><span>Négatif</span></div>
+          <p style="font-size:13px;color:var(--fg-2);margin-top:8px" id="strategy-label">Allure régulière</p>
+        </div>
+
+        <div class="flex-end" style="display:flex;justify-content:flex-end">
+          <button type="button" class="btn-primary"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Enregistrer et notifier le coureur</button>
+        </div>
+      </form>
+
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>Point</th><th>D+ / D-</th><th>Allure</th><th>Segment</th><th>Cumul</th></tr></thead>
+          <tbody id="splits-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ========================= BADGES & HALL OF FAME ======================= -->
+    <section class="view" id="view-badges">
+      <div class="card" style="margin-bottom:20px">
+        <div class="card-title-row"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 6 4 3 6-7 6 7 4-3-2 13H4z"/><line x1="6" y1="21" x2="18" y2="21"/></svg><span class="label-eyebrow">Hall of Fame · Semaine du 27 juillet 2026</span></div>
+        <div class="podium" id="podium"></div>
+      </div>
+
+      <div id="badge-sections"></div>
+    </section>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop"></div>
+<div class="modal-wrap" id="modal-wrap">
+  <div class="modal">
+    <h2 id="modal-date">JEUDI 3 AOÛT</h2>
+    <p class="sub">Choisis le type de séance</p>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px" id="modal-tabs"></div>
+    <div id="modal-fields"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+      <button class="btn-primary" id="modal-save">Enregistrer</button>
+      <button class="btn-ghost" id="modal-cancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =====================================================================
+     Navigation — mirrors the real sidebar groups (app/(authenticated)/sidebar.tsx)
+     ===================================================================== */
+  var ICONS = {
+    classement: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.4" fill="currentColor" stroke="none"/></svg>',
+    ligues: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h4v-4H3zM9 20h4v-9H9zM15 20h4V7h-4z"/></svg>',
+    hof: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m2 6 4 3 6-7 6 7 4-3-2 13H4z"/><line x1="6" y1="21" x2="18" y2="21"/></svg>',
+    competitions: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="3" x2="5" y2="21"/><path d="M5 4h13l-3 4 3 4H5"/></svg>',
+    clubs: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M14 15.2c2.6.4 4 2.2 4 4.8"/></svg>',
+    dashboard: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>',
+    historique: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 8v4l3 2"/></svg>',
+    records: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4a3 3 0 0 0 3 5M17 5h3a3 3 0 0 1-3 5"/><path d="M12 14v3M9 21h6M9 21l.6-3.5h4.8L15 21"/></svg>',
+    stats: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M11 20V4M18 20v-7"/></svg>',
+    calendrier: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></svg>',
+    plan: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></svg>',
+    recherche: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>',
+    messagerie: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg>',
+    coach: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/><path d="m19 3 .8 1.6L21.5 5l-1.7.6L19 7.2l-.8-1.6L16.5 5l1.7-.4z"/></svg>'
+  };
+
+  var NAV_GROUPS = [
+    { label: "Compétition", items: [
+      { key: "classement", label: "Classement" },
+      { key: "ligues", label: "Ligues", view: "ligues" },
+      { key: "hof", label: "Hall of Fame", view: "badges" },
+      { key: "competitions", label: "Compétitions" },
+      { key: "clubs", label: "Clubs" }
+    ]},
+    { label: "Ma progression", items: [
+      { key: "dashboard", label: "Tableau de bord", view: "dashboard" },
+      { key: "historique", label: "Historique" },
+      { key: "records", label: "Records" },
+      { key: "stats", label: "Statistiques" },
+      { key: "calendrier", label: "Calendrier", view: "calendrier" },
+      { key: "plan", label: "Plan d'entraînement", view: "plan" }
+    ]},
+    { label: "Communauté", items: [
+      { key: "recherche", label: "Recherche" },
+      { key: "messagerie", label: "Messagerie" },
+      { key: "coach", label: "Vue Coach" }
+    ]}
+  ];
+
+  var VIEW_META = {
+    dashboard: { title: "Tableau de bord", sub: "Vue d'ensemble de ta semaine" },
+    ligues: { title: "Ligues", sub: "Ta progression par paliers, cohorte hebdomadaire" },
+    calendrier: { title: "Calendrier", sub: "Planifie tes séances d'entraînement" },
+    plan: { title: "Plan d'entraînement", sub: "Stratégie d'allure course par course" },
+    badges: { title: "Badges & Hall of Fame", sub: "Trophées cosmétiques, classement inchangé" }
+  };
+
+  var navEl = document.getElementById("nav");
+  NAV_GROUPS.forEach(function (group) {
+    var g = document.createElement("div");
+    g.className = "nav-group";
+    var label = document.createElement("span");
+    label.className = "nav-label";
+    label.textContent = group.label;
+    g.appendChild(label);
+    group.items.forEach(function (item) {
+      var btn = document.createElement("button");
+      btn.className = "nav-item" + (item.view === "dashboard" ? " active" : "");
+      btn.innerHTML = ICONS[item.key] + "<span>" + item.label + "</span>";
+      if (item.view) {
+        btn.addEventListener("click", function () { showView(item.view); });
+      }
+      g.appendChild(btn);
+    });
+    navEl.appendChild(g);
+  });
+
+  function showView(name) {
+    document.querySelectorAll(".view").forEach(function (v) { v.classList.remove("active"); });
+    document.getElementById("view-" + name).classList.add("active");
+    document.querySelectorAll(".nav-item").forEach(function (b) { b.classList.remove("active"); });
+    Array.prototype.forEach.call(navEl.querySelectorAll("button"), function (b, i) {});
+    // re-derive active button by matching label text against VIEW_META title
+    var flat = [];
+    NAV_GROUPS.forEach(function (g) { g.items.forEach(function (it) { flat.push(it); }); });
+    var idx = flat.findIndex(function (it) { return it.view === name; });
+    if (idx >= 0) navEl.querySelectorAll(".nav-item")[idx].classList.add("active");
+    document.getElementById("view-title").textContent = VIEW_META[name].title;
+    document.getElementById("view-sub").textContent = VIEW_META[name].sub;
+  }
+
+  document.querySelectorAll("[data-nav]").forEach(function (el) {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", function () { showView(el.getAttribute("data-nav")); });
+  });
+
+  /* =====================================================================
+     Dashboard — weekly bar chart
+     ===================================================================== */
+  var WEEK = [
+    { d: "Lun", now: 60, prev: 45 }, { d: "Mar", now: 90, prev: 70 }, { d: "Mer", now: 40, prev: 55 },
+    { d: "Jeu", now: 75, prev: 35 }, { d: "Ven", now: 100, prev: 60 }, { d: "Sam", now: 55, prev: 80 },
+    { d: "Dim", now: 70, prev: 30 }
+  ];
+  var barsEl = document.getElementById("weekly-bars");
+  WEEK.forEach(function (w) {
+    var col = document.createElement("div");
+    col.className = "bar-col";
+    col.innerHTML = '<div class="bar-pair"><div class="bar now" style="height:' + w.now + '%"></div><div class="bar prev" style="height:' + w.prev + '%"></div></div><span class="day">' + w.d + "</span>";
+    barsEl.appendChild(col);
+  });
+
+  /* =====================================================================
+     Ligues — tier ladder + cohort table
+     ===================================================================== */
+  var TIERS = ["bronze_3","bronze_2","bronze_1","silver_3","silver_2","silver_1","gold_3","gold_2","gold_1","diamond","master","legend"];
+  var CURRENT_TIER_INDEX = TIERS.indexOf("gold_1");
+  var ladderEl = document.getElementById("ladder");
+  TIERS.forEach(function (t, i) {
+    var seg = document.createElement("div");
+    seg.className = "ladder-seg" + (i < CURRENT_TIER_INDEX ? " done" : i === CURRENT_TIER_INDEX ? " current" : "");
+    ladderEl.appendChild(seg);
+  });
+
+  var COHORT = [
+    ["Marta Kowalska", 3120], ["Lucas Meyer", 2980], ["Fenna de Groot", 2911], ["Sanne de Vries", 2708],
+    ["Youssef El Amrani", 2640], ["Iida Koskinen", 2510], ["Tomasz Nowak", 2455], ["Bram Willems", 2390],
+    ["Elin Karlsson", 2301], ["Noah Pelletier", 2244], ["Greta Fischer", 2190], ["Diego Alvarez", 2130],
+    ["Sara Lindqvist", 2075], ["Milan Novak", 2011], ["Amira Haddad", 1958], ["Ruben Jansen", 1902],
+    ["Клара Petrova", 1844], ["Oskar Bergström", 1790], ["Chloé Simon", 1733], ["Petar Ilić", 1670],
+    ["Nina Vogel", 1602], ["Kacper Wiśniewski", 1533], ["Liv Andersen", 1461], ["Théo Girard", 1390]
+  ];
+  var cohortBody = document.getElementById("cohort-body");
+  COHORT.forEach(function (row, i) {
+    var rank = i + 1, isMe = row[0] === "Sanne de Vries";
+    var zone = rank <= 5 ? "promo" : rank > COHORT.length - 5 ? "releg" : null;
+    var tr = document.createElement("tr");
+    if (isMe) tr.className = "row-me";
+    tr.innerHTML =
+      "<td style=\"font-family:var(--font-mono);color:var(--fg-2)\">" + rank + "</td>" +
+      "<td>" + row[0] + (isMe ? '<span class="me-tag">TOI</span>' : "") + "</td>" +
+      "<td style=\"font-family:var(--font-mono)\">" + row[1].toLocaleString("fr-FR") + "</td>" +
+      "<td>" + (zone ? '<span class="zone-tag ' + zone + '">' + (zone === "promo" ? "Promotion" : "Relégation") + "</span>" : '<span style="color:var(--fg-3);font-size:12px">Stable</span>') + "</td>";
+    cohortBody.appendChild(tr);
+  });
+
+  /* =====================================================================
+     Calendrier — month grid + session modal (mirrors TrainingCalendar /
+     TrainingSessionModal, lib/training-sessions.ts)
+     ===================================================================== */
+  var SESSION_META = {
+    endurance: { label: "Endurance" }, fractionne: { label: "Fractionné" },
+    renfo_ppg: { label: "Renfo / PPG" }, repos: { label: "Repos" }
+  };
+  var MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+  var calState = { year: 2026, month: 8 };
+  var SESSIONS = {
+    "2026-08-03": { type: "endurance", label: "10 km endurance" },
+    "2026-08-04": { type: "repos", label: "Repos" },
+    "2026-08-05": { type: "fractionne", label: "6×800m" },
+    "2026-08-07": { type: "endurance", label: "14 km endurance" },
+    "2026-08-08": { type: "renfo_ppg", label: "Renfo / PPG" },
+    "2026-08-10": { type: "fractionne", label: "8×400m" },
+    "2026-08-12": { type: "endurance", label: "18 km endurance" },
+    "2026-08-14": { type: "repos", label: "Repos" },
+    "2026-08-17": { type: "endurance", label: "12 km endurance" },
+    "2026-08-19": { type: "renfo_ppg", label: "Renfo / PPG" },
+    "2026-08-21": { type: "fractionne", label: "5×1000m" },
+    "2026-08-24": { type: "endurance", label: "21 km endurance" }
+  };
+
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function mondayFirstWeekday(date) { return (date.getUTCDay() + 6) % 7; }
+
+  function renderCalendar() {
+    document.getElementById("cal-month-label").textContent = MONTHS[calState.month - 1] + " " + calState.year;
+    var first = new Date(Date.UTC(calState.year, calState.month - 1, 1));
+    var daysInMonth = new Date(Date.UTC(calState.year, calState.month, 0)).getUTCDate();
+    var leading = mondayFirstWeekday(first);
+    var cells = [];
+    for (var i = 0; i < leading; i++) cells.push(null);
+    for (var d = 1; d <= daysInMonth; d++) cells.push(calState.year + "-" + pad2(calState.month) + "-" + pad2(d));
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    var today = "2026-08-03";
+    var wrap = document.getElementById("cal-days");
+    wrap.innerHTML = "";
+    cells.forEach(function (dateStr) {
+      var cell = document.createElement("button");
+      cell.className = "cal-cell" + (dateStr ? "" : " empty");
+      if (dateStr) {
+        var session = SESSIONS[dateStr];
+        var dayNum = Number(dateStr.slice(-2));
+        cell.innerHTML = '<span class="cal-daynum' + (dateStr === today ? " today" : "") + '">' + dayNum + "</span>" +
+          (session ? '<span class="cal-pill type-' + session.type + '">' + session.label + "</span>" : "");
+        cell.addEventListener("click", function () { openModal(dateStr, session); });
+      }
+      wrap.appendChild(cell);
+    });
+  }
+  document.getElementById("cal-prev").addEventListener("click", function () {
+    calState.month--; if (calState.month < 1) { calState.month = 12; calState.year--; } renderCalendar();
+  });
+  document.getElementById("cal-next").addEventListener("click", function () {
+    calState.month++; if (calState.month > 12) { calState.month = 1; calState.year++; } renderCalendar();
+  });
+  renderCalendar();
+
+  var WEEKDAY_UPPER = ["LUNDI","MARDI","MERCREDI","JEUDI","VENDREDI","SAMEDI","DIMANCHE"];
+  function formatFullDateUpper(dateStr) {
+    var parts = dateStr.split("-").map(Number);
+    var dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    return WEEKDAY_UPPER[mondayFirstWeekday(dt)] + " " + parts[2] + " " + MONTHS[parts[1] - 1].toUpperCase();
+  }
+
+  var modalType = "endurance";
+  function openModal(dateStr, session) {
+    modalType = session ? session.type : "endurance";
+    document.getElementById("modal-date").textContent = formatFullDateUpper(dateStr);
+    renderModalTabs();
+    renderModalFields();
+    document.getElementById("modal-backdrop").classList.add("open");
+    document.getElementById("modal-wrap").classList.add("open");
+  }
+  function closeModal() {
+    document.getElementById("modal-backdrop").classList.remove("open");
+    document.getElementById("modal-wrap").classList.remove("open");
+  }
+  document.getElementById("modal-backdrop").addEventListener("click", closeModal);
+  document.getElementById("modal-cancel").addEventListener("click", closeModal);
+  document.getElementById("modal-save").addEventListener("click", closeModal);
+
+  function renderModalTabs() {
+    var tabs = document.getElementById("modal-tabs");
+    tabs.innerHTML = "";
+    Object.keys(SESSION_META).forEach(function (type) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "type-tab tab-" + type + (modalType === type ? " active" : "");
+      btn.textContent = SESSION_META[type].label;
+      btn.addEventListener("click", function () { modalType = type; renderModalTabs(); renderModalFields(); });
+      tabs.appendChild(btn);
+    });
+  }
+
+  function field(label, innerHtml, full) {
+    return '<div class="field-label" style="margin-bottom:4px' + (full ? ";grid-column:1/-1" : "") + '">' + label + "</div>" +
+      innerHtml + (full ? "" : "");
+  }
+
+  function renderModalFields() {
+    var el = document.getElementById("modal-fields");
+    if (modalType === "endurance") {
+      el.innerHTML =
+        '<div class="field-grid">' +
+        '<div>' + field("Distance totale (km)", '<input class="input" type="number" placeholder="km"/>') + "</div>" +
+        '<div>' + field("Durée", '<div class="duration-triplet"><input class="input" type="number" placeholder="h"/><input class="input" type="number" placeholder="min"/><input class="input" type="number" placeholder="sec"/></div>') + "</div>" +
+        '<div>' + field("Allure cible", '<div class="pace-pair"><input class="input" type="number" placeholder="min"/><span style="color:var(--fg-3)">:</span><input class="input" type="number" placeholder="sec"/></div>') + "</div>" +
+        '<div>' + field("FC cible", '<input class="input" type="text" placeholder="ex : 150-160 bpm"/>') + "</div>" +
+        '<div class="full">' + field("Notes", '<textarea class="textarea" rows="3"></textarea>') + "</div>" +
+        "</div>";
+    } else if (modalType === "fractionne") {
+      el.innerHTML =
+        '<div class="field-grid">' +
+        '<div>' + field("Distance totale (km)", '<input class="input" type="number"/>') + "</div>" +
+        '<div>' + field("Échauffement (min)", '<input class="input" type="number"/>') + "</div>" +
+        '<div>' + field("Nb répétitions", '<input class="input" type="number"/>') + "</div>" +
+        '<div>' + field("Unité de la répétition", '<div class="select-wrap"><select class="select"><option>Distance (m)</option><option>Temps (s)</option></select><svg class="chevron icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>') + "</div>" +
+        '<div>' + field("Valeur par répétition", '<input class="input" type="text" placeholder="ex : 1000 ou 180"/>') + "</div>" +
+        '<div>' + field("Allure cible / rep", '<div class="pace-pair"><input class="input" type="number" placeholder="min"/><span style="color:var(--fg-3)">:</span><input class="input" type="number" placeholder="sec"/></div>') + "</div>" +
+        '<div>' + field("Récupération (s)", '<input class="input" type="number"/>') + "</div>" +
+        '<div>' + field("Type de récup", '<div class="select-wrap"><select class="select"><option>Trot</option><option>Marche</option><option>Statique</option></select><svg class="chevron icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>') + "</div>" +
+        '<div class="full">' + field("Retour au calme (min)", '<input class="input" type="number"/>') + "</div>" +
+        '<div class="full">' + field("Règle d'arrêt", '<textarea class="textarea" rows="2" placeholder="ex : Gêne ischio-jambier > 1/10 → arrêt"></textarea>') + "</div>" +
+        '<div class="full">' + field("Notes", '<textarea class="textarea" rows="2"></textarea>') + "</div>" +
+        "</div>";
+    } else if (modalType === "renfo_ppg") {
+      el.innerHTML =
+        '<div style="display:flex;flex-direction:column;gap:14px">' +
+        '<div>' + field("Durée (min)", '<input class="input" type="number"/>') + "</div>" +
+        '<div>' + field("Exercices", '<textarea class="textarea" rows="3" placeholder="ex : isométrie ischio 3×45s, nordic curl 3×8..."></textarea>') + "</div>" +
+        '<div>' + field("Notes", '<textarea class="textarea" rows="3"></textarea>') + "</div>" +
+        "</div>";
+    } else {
+      el.innerHTML = '<div>' + field("Notes", '<textarea class="textarea" rows="4"></textarea>') + "</div>";
+    }
+  }
+
+  /* =====================================================================
+     Plan de course — race list + GPX import + pace strategy + splits
+     (ports lib/race-plan.ts + lib/gpx.ts formulas exactly)
+     ===================================================================== */
+  var PACE_STRATEGY_MAX_SWING_PCT = 20;
+  var RELIEF_K_UP = 2.4, RELIEF_K_DOWN = 1.0, RELIEF_MAX_GRADE = 15;
+  var STRATEGY_LABELS = { "-1": "Allure très positive", "-0.5": "Allure positive", "0": "Allure régulière", "0.5": "Allure négative", "1": "Allure très négative" };
+
+  var RACES = [
+    { id: "varsovie", name: "Marathon de Varsovie", date: "27 sept. 2026", distanceKm: 42.195, active: true, status: "COURSE ACTIVE" },
+    { id: "cracovie", name: "Semi de Cracovie", date: "18 oct. 2026", distanceKm: 21.1, active: false, status: "PLAN PRÊT" },
+    { id: "vistule", name: "10 km Vistule", date: "2 nov. 2026", distanceKm: 10, active: false, status: "PLAN DE COURSE VIDE" }
+  ];
+  var raceCardsEl = document.getElementById("race-cards");
+  var selectedRaceId = "varsovie";
+  RACES.forEach(function (race) {
+    var card = document.createElement("div");
+    card.className = "race-card" + (race.id === selectedRaceId ? " selected" : "");
+    var statusColor = race.active ? "var(--accent)" : "var(--fg-3)";
+    card.innerHTML =
+      '<div class="name"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="' + (race.active ? "var(--accent)" : "var(--fg-3)") + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="3" x2="5" y2="21"/><path d="M5 4h13l-3 4 3 4H5"/></svg>' + race.name + "</div>" +
+      '<div class="meta">' + race.date + " · " + race.distanceKm.toLocaleString("fr-FR") + " km</div>" +
+      '<div class="status" style="color:' + statusColor + '">' + race.status + "</div>";
+    card.addEventListener("click", function () {
+      selectedRaceId = race.id;
+      document.getElementById("plan-race-name").textContent = race.name;
+      document.getElementById("distance-preset").value = String(race.distanceKm);
+      distanceKm = race.distanceKm;
+      Array.prototype.forEach.call(raceCardsEl.children, function (c) { c.classList.remove("selected"); });
+      card.classList.add("selected");
+      recompute();
+    });
+    raceCardsEl.appendChild(card);
+  });
+
+  var distanceKm = 42.195;
+  var targetPaceSecPerKm = 4 * 60 + 15;
+  var splitDistanceKm = 1;
+  var paceStrategy = 0;
+  var reliefEnabled = true;
+  var gpxPoints = [];
+  var gpxSplitElevations = null;
+  var comments = {};
+
+  function computeSplitDistances(totalKm, splitKm) {
+    var fullLaps = Math.floor(totalKm / splitKm);
+    var remainder = Math.round((totalKm - fullLaps * splitKm) * 1000) / 1000;
+    var laps = [];
+    for (var i = 0; i < fullLaps; i++) laps.push({ distanceKm: splitKm, isFinishLap: false });
+    if (remainder > 0.001) laps.push({ distanceKm: remainder, isFinishLap: true });
+    return laps;
+  }
+  function strategyDelta(basePace, intensity, index, total) {
+    if (intensity === 0 || total <= 1) return 0;
+    var swing = basePace * (PACE_STRATEGY_MAX_SWING_PCT / 100);
+    var t = index / (total - 1);
+    var linear = t - 0.5;
+    return -intensity * linear * swing;
+  }
+  function reliefDelta(basePace, splitKm, elevation) {
+    var distanceM = splitKm * 1000;
+    if (distanceM <= 0 || !elevation) return 0;
+    var gradeUp = Math.min(RELIEF_MAX_GRADE, (elevation.gain / distanceM) * 100);
+    var gradeDown = Math.min(RELIEF_MAX_GRADE, (elevation.loss / distanceM) * 100);
+    return basePace * ((RELIEF_K_UP / 100) * gradeUp - (RELIEF_K_DOWN / 100) * gradeDown);
+  }
+  function computeSplits() {
+    var effSplitKm = splitMode === "full" ? (distanceKm || 1) : Number(splitMode);
+    var laps = computeSplitDistances(distanceKm, effSplitKm);
+    var cumKm = 0, cumSec = 0;
+    return laps.map(function (lap, i) {
+      var sDelta = strategyDelta(targetPaceSecPerKm, paceStrategy, i, laps.length);
+      var elevation = reliefEnabled && gpxSplitElevations ? gpxSplitElevations[i] : null;
+      var rDelta = elevation ? reliefDelta(targetPaceSecPerKm, lap.distanceKm, elevation) : 0;
+      var pace = Math.round(targetPaceSecPerKm + sDelta + rDelta);
+      cumKm += lap.distanceKm;
+      var segSec = lap.distanceKm * pace;
+      cumSec += segSec;
+      return { lap: i + 1, distanceKm: lap.distanceKm, pace: pace, elevation: elevation, cumKm: cumKm, segSec: segSec, cumSec: cumSec };
+    });
+  }
+  function fmtPace(sec) { var m = Math.floor(sec / 60), s = Math.round(sec % 60); return m + ":" + String(s).padStart(2, "0") + " /km"; }
+  function fmtDuration(totalSec) {
+    var r = Math.max(0, Math.round(totalSec));
+    var h = Math.floor(r / 3600), m = Math.floor((r % 3600) / 60), s = r % 60;
+    return (h > 0 ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(s).padStart(2, "0");
+  }
+  function fmtKm(km) { return km.toLocaleString("fr-FR", { maximumFractionDigits: 2 }) + " km"; }
+
+  var splitMode = "1";
+  var splitsBody = document.getElementById("splits-body");
+  function recompute() {
+    document.getElementById("pace-summary").textContent = targetPaceSecPerKm > 0 ? "À " + Math.floor(targetPaceSecPerKm / 60) + ":" + String(Math.round(targetPaceSecPerKm % 60)).padStart(2, "0") + "/km" : "";
+    var splits = computeSplits();
+    splitsBody.innerHTML = "";
+    splits.forEach(function (s) {
+      var tr = document.createElement("tr");
+      var diff = s.pace - targetPaceSecPerKm;
+      var paceClass = diff < -1 ? "faster" : diff > 1 ? "slower" : "even";
+      var elevHtml = s.elevation
+        ? '<span style="color:var(--green)">+' + s.elevation.gain + '</span><span style="color:var(--fg-3)"> / </span><span style="color:var(--red)">-' + s.elevation.loss + '</span><span style="color:var(--fg-2)"> m</span>'
+        : '<span style="color:var(--fg-2)">–</span>';
+      var hasComment = !!comments[s.lap];
+      tr.innerHTML =
+        "<td>" + fmtKm(s.cumKm) + "</td>" +
+        "<td>" + elevHtml + "</td>" +
+        '<td class="pace-cell ' + paceClass + '" style="font-family:var(--font-mono)">' + fmtPace(s.pace) + "</td>" +
+        "<td style=\"color:var(--fg-2)\">" + fmtDuration(s.segSec) + "</td>" +
+        '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-family:var(--font-mono);color:var(--accent)">' + fmtDuration(s.cumSec) + '</span><button type="button" class="comment-btn' + (hasComment ? " has" : "") + '" data-lap="' + s.lap + '"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4z"/></svg></button></div></td>';
+      splitsBody.appendChild(tr);
+
+      var editorTr = document.createElement("tr");
+      editorTr.innerHTML = '<td colspan="5" style="padding:0"><div class="comment-editor" id="editor-' + s.lap + '" style="display:flex;gap:8px;align-items:center"><input class="input" type="text" placeholder="Commenter ce split…" value="' + (comments[s.lap] || "") + '"/><button type="button" class="btn-primary" style="padding:8px 16px">OK</button></div></td>';
+      splitsBody.appendChild(editorTr);
+    });
+
+    Array.prototype.forEach.call(splitsBody.querySelectorAll(".comment-btn"), function (btn) {
+      btn.addEventListener("click", function () {
+        var lap = btn.getAttribute("data-lap");
+        var ed = document.getElementById("editor-" + lap);
+        var isOpen = ed.style.display === "flex";
+        Array.prototype.forEach.call(splitsBody.querySelectorAll("[id^=editor-]"), function (e) { e.style.display = "none"; });
+        ed.style.display = isOpen ? "none" : "flex";
+        if (!isOpen) {
+          var input = ed.querySelector("input");
+          var okBtn = ed.querySelector("button");
+          okBtn.onclick = function () {
+            var v = input.value.trim();
+            if (v) comments[lap] = v; else delete comments[lap];
+            recompute();
+          };
+        }
+      });
+    });
+  }
+
+  document.getElementById("pace-min").addEventListener("input", function (e) { targetPaceSecPerKm = (Number(e.target.value) || 0) * 60 + (Number(document.getElementById("pace-sec").value) || 0); recompute(); });
+  document.getElementById("pace-sec").addEventListener("input", function (e) { targetPaceSecPerKm = (Number(document.getElementById("pace-min").value) || 0) * 60 + (Number(e.target.value) || 0); recompute(); });
+  document.getElementById("distance-preset").addEventListener("change", function (e) { distanceKm = Number(e.target.value); recompute(); });
+  document.getElementById("split-mode").addEventListener("change", function (e) { splitMode = e.target.value; recompute(); });
+  document.getElementById("strategy-slider").addEventListener("input", function (e) {
+    paceStrategy = Number(e.target.value);
+    document.getElementById("strategy-label").textContent = STRATEGY_LABELS[String(paceStrategy)];
+    recompute();
+  });
+  document.getElementById("strategy-reset").addEventListener("click", function () {
+    paceStrategy = 0; document.getElementById("strategy-slider").value = "0";
+    document.getElementById("strategy-label").textContent = STRATEGY_LABELS["0"];
+    recompute();
+  });
+  document.getElementById("relief-toggle").addEventListener("click", function () {
+    reliefEnabled = !reliefEnabled;
+    this.classList.toggle("on", reliefEnabled);
+    document.getElementById("relief-copy").textContent = reliefEnabled ? "Les allures cibles tiennent compte du relief." : "Allure cible identique quel que soit le relief.";
+    recompute();
+  });
+
+  /* Real GPX parsing — same regex approach as lib/gpx.ts, so a genuine
+     .gpx file dropped here computes real D+/D- per split, not a mock. */
+  var TRKPT_RE = /<trkpt\b[^>]*\blat="(-?[\d.]+)"[^>]*\blon="(-?[\d.]+)"[^>]*>([\s\S]*?)<\/trkpt>/g;
+  var ELE_RE = /<ele>\s*(-?[\d.]+)\s*<\/ele>/;
+  function parseGpx(xml) {
+    var points = [], m;
+    TRKPT_RE.lastIndex = 0;
+    while ((m = TRKPT_RE.exec(xml))) {
+      var lat = Number(m[1]), lon = Number(m[2]);
+      if (!isFinite(lat) || !isFinite(lon)) continue;
+      var eleM = ELE_RE.exec(m[3]);
+      points.push({ lat: lat, lon: lon, ele: eleM ? Number(eleM[1]) : null });
+    }
+    return points;
+  }
+  function haversineKm(a, b) {
+    var R = 6371, toRad = function (d) { return d * Math.PI / 180; };
+    var dLat = toRad(b.lat - a.lat), dLon = toRad(b.lon - a.lon);
+    var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.pow(Math.sin(dLon / 2), 2);
+    return 2 * R * Math.asin(Math.sqrt(Math.min(1, h)));
+  }
+  function gpxSummary(points) {
+    var dist = 0, gain = 0, loss = 0;
+    for (var i = 1; i < points.length; i++) {
+      dist += haversineKm(points[i - 1], points[i]);
+      if (points[i - 1].ele == null || points[i].ele == null) continue;
+      var delta = points[i].ele - points[i - 1].ele;
+      if (delta > 0) gain += delta; else loss += -delta;
+    }
+    return { distanceKm: dist, gain: Math.round(gain), loss: Math.round(loss) };
+  }
+  function splitElevationsFromGpx(points, splitLengthsKm) {
+    var result = splitLengthsKm.map(function () { return { gain: 0, loss: 0 }; });
+    if (points.length < 2 || splitLengthsKm.length === 0) return result;
+    var boundaries = [], acc = 0;
+    splitLengthsKm.forEach(function (len) { acc += len; boundaries.push(acc); });
+    var cum = 0;
+    for (var i = 1; i < points.length; i++) {
+      cum += haversineKm(points[i - 1], points[i]);
+      if (points[i - 1].ele == null || points[i].ele == null) continue;
+      var delta = points[i].ele - points[i - 1].ele;
+      if (delta === 0) continue;
+      var idx = boundaries.length - 1;
+      for (var b = 0; b < boundaries.length; b++) { if (cum <= boundaries[b] + 1e-9) { idx = b; break; } }
+      if (delta > 0) result[idx].gain += delta; else result[idx].loss += -delta;
+    }
+    result.forEach(function (r) { r.gain = Math.round(r.gain); r.loss = Math.round(r.loss); });
+    return result;
+  }
+
+  document.getElementById("gpx-dropzone").addEventListener("click", function (e) {});
+  document.getElementById("gpx-input").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      gpxPoints = parseGpx(String(reader.result));
+      if (gpxPoints.length < 2) return;
+      var summary = gpxSummary(gpxPoints);
+      document.getElementById("gpx-dropzone").style.display = "none";
+      document.getElementById("gpx-filled").style.display = "flex";
+      document.getElementById("gpx-remove").style.display = "inline-block";
+      document.getElementById("gpx-filename").textContent = file.name;
+      document.getElementById("gpx-summary").textContent = fmtKm(summary.distanceKm) + " · D+ " + summary.gain + " m · D- -" + summary.loss + " m";
+      var effSplitKm = splitMode === "full" ? (distanceKm || 1) : Number(splitMode);
+      var lengths = computeSplitDistances(distanceKm, effSplitKm).map(function (l) { return l.distanceKm; });
+      gpxSplitElevations = splitElevationsFromGpx(gpxPoints, lengths);
+      recompute();
+    };
+    reader.readAsText(file);
+  });
+  document.getElementById("gpx-remove").addEventListener("click", function () {
+    gpxPoints = []; gpxSplitElevations = null;
+    document.getElementById("gpx-dropzone").style.display = "flex";
+    document.getElementById("gpx-filled").style.display = "none";
+    this.style.display = "none";
+    recompute();
+  });
+
+  recompute();
+
+  /* =====================================================================
+     Badges & Hall of Fame
+     ===================================================================== */
+  var PODIUM = [
+    { rank: 2, name: "Lucas Meyer", pts: 3410 }, { rank: 1, name: "Fenna de Groot", pts: 3580 }, { rank: 3, name: "Marta Kowalska", pts: 3255 }
+  ];
+  var podiumEl = document.getElementById("podium");
+  PODIUM.sort(function (a, b) { return (a.rank === 1 ? -1 : b.rank === 1 ? 1 : a.rank - b.rank); }).forEach(function (p) {
+    var medalClass = p.rank === 1 ? "gold" : p.rank === 2 ? "silver" : "bronze";
+    var div = document.createElement("div");
+    div.className = "podium-card" + (p.rank === 1 ? " rank-1" : "");
+    div.innerHTML = '<div class="medal ' + medalClass + '">' + p.rank + '</div><div class="p-name">' + p.name + '</div><div class="p-pts">' + p.pts.toLocaleString("fr-FR") + " pts</div>";
+    podiumEl.appendChild(div);
+  });
+
+  var BADGE_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="6"/><path d="m8.5 14-1.5 7 5-3 5 3-1.5-7"/></svg>';
+  var LOCK_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  var BADGE_SECTIONS = [
+    { title: "Distance cumulée", items: [
+      { label: "5 km", thresh: "5 km", earned: true }, { label: "10 km", thresh: "10 km", earned: true },
+      { label: "Semi", thresh: "21,1 km", earned: true }, { label: "Marathon", thresh: "42,2 km", earned: true },
+      { label: "Centurion", thresh: "100 km", earned: false }, { label: "500 km", thresh: "500 km", earned: false },
+      { label: "1 000 km", thresh: "1 000 km", earned: false }, { label: "10 000 km", thresh: "10 000 km", earned: false }
+    ]},
+    { title: "Dénivelé cumulé", items: [
+      { label: "1 000 m", thresh: "1 000 m", earned: true }, { label: "5 000 m", thresh: "5 000 m", earned: false },
+      { label: "10 000 m", thresh: "10 000 m", earned: false }, { label: "50 000 m", thresh: "50 000 m", earned: false },
+      { label: "100 000 m", thresh: "100 000 m", earned: false }
+    ]},
+    { title: "Régularité", items: [
+      { label: "Série 7 jours", thresh: "7 jours", earned: true }, { label: "Série 30 jours", thresh: "30 jours", earned: false },
+      { label: "Série 100 jours", thresh: "100 jours", earned: false }, { label: "Série 365 jours", thresh: "365 jours", earned: false }
+    ]},
+    { title: "Performance", items: [
+      { label: "Victoire hebdo", thresh: "1er de cohorte", earned: false }, { label: "10 podiums", thresh: "top 3 cohorte", earned: true },
+      { label: "50 podiums", thresh: "top 3 cohorte", earned: false }, { label: "Top 1000 monde", thresh: "classement monde", earned: false },
+      { label: "Top 100 France", thresh: "classement France", earned: false }, { label: "Top 10 France", thresh: "classement France", earned: false }
+    ]}
+  ];
+  var badgeSectionsEl = document.getElementById("badge-sections");
+  BADGE_SECTIONS.forEach(function (section) {
+    var sec = document.createElement("div");
+    sec.className = "badge-section";
+    var grid = section.items.map(function (b) {
+      return '<div class="badge-tile ' + (b.earned ? "earned" : "locked") + '"><div class="badge-icon">' + (b.earned ? BADGE_ICON : LOCK_ICON) + '</div><div class="b-label">' + b.label + '</div><div class="b-thresh">' + b.thresh + "</div></div>";
+    }).join("");
+    sec.innerHTML = "<h3>" + section.title + '</h3><div class="badge-grid">' + grid + "</div>";
+    badgeSectionsEl.appendChild(sec);
+  });
+})();
+</script>
